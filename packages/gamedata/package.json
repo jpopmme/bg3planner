@@ -8,6 +8,14 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "typecheck": "tsc -p tsconfig.json"
+    "typecheck": "tsc -p tsconfig.json",
+    "generate:spells": "tsx scripts/generate-spells.ts"
+  },
+  "dependencies": {
+    "@bg3planner/shared": "^0.0.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "tsx": "^4.23.15"
   }
 }

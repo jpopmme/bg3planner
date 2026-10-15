@@ -107,6 +107,12 @@ The planner is only as good as its dataset. Plan:
      localization). This is the authoritative source, but needs more work.
    - Start with bg3.wiki. Keep the generator scripts in `packages/gamedata/scripts` so the data can be
      rebuilt after a game patch.
+   - *Learned in M1:* bg3.wiki's API `cargoquery` is closed to anonymous users, but
+     `Special:CargoExport` returns JSON. Anonymous traffic is rate-limited (HTTP 429), so the
+     generator retries with backoff and can rebuild from a saved export (`--input`).
+   - *Learned in M1:* BG3 differs from tabletop 5e on spell slots. A single class's caster level
+     rounds **up** (Eldritch Knight 4 → caster level 2), while multiclass fractions are summed and
+     then rounded **down**. The rules engine (M2) must follow this.
 3. **Versioning:** each dataset carries a `gameVersion` (e.g. `patch-8`). Each saved build stores the
    dataset version it was made with, so migrations stay possible. Patch 8 added new subclasses, and
    more changes are likely.
