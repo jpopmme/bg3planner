@@ -175,9 +175,29 @@ export function walkBuild(build: Build, data: GameData): WalkResult {
     issue('warning', 1, `Choose a ${race.name} subrace`);
   }
 
+  const nameOf = (id: string) =>
+    (index.races.get(id) ?? index.subraces.get(id) ?? index.backgrounds.get(id))?.name ?? id;
+
   const background = index.backgrounds.get(build.backgroundId);
   if (!background) issue('error', 1, `Unknown background "${build.backgroundId}"`);
   else background.skills.forEach((s) => state.skills.add(s as Skill));
+
+  const origin = index.origins.get(build.originId ?? 'custom');
+  if (!origin) {
+    issue('error', 1, `Unknown origin "${build.originId}"`);
+  } else {
+    const fixed = (what: string, wanted: string | undefined, actual: string | undefined) => {
+      if (wanted && wanted !== actual) {
+        issue('error', 1, `${origin.name} is always a ${what}: ${nameOf(wanted)}`);
+      }
+    };
+    fixed('race', origin.raceId, build.raceId);
+    fixed('subrace', origin.subraceId, build.subraceId);
+    fixed('background', origin.backgroundId, build.backgroundId);
+    if (background?.darkUrgeOnly && origin.kind !== 'dark-urge') {
+      issue('error', 1, `Only The Dark Urge can have the ${background.name} background`);
+    }
+  }
 
   checkAbilities(build, (severity, message) => issue(severity, 1, message));
 

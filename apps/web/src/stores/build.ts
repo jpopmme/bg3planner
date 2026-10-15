@@ -40,6 +40,36 @@ export const useBuildStore = defineStore('build', () => {
     });
   }
 
+  /** The character's origin, and which creation fields it fixes. */
+  const origin = computed(() =>
+    gameData.origins.find((o) => o.id === (build.value.originId ?? 'custom'))!,
+  );
+  const locks = computed(() => ({
+    race: !!origin.value.raceId,
+    background: !!origin.value.backgroundId,
+  }));
+
+  /** Changes who the character is, applying the race, subrace and background it fixes. */
+  function setOrigin(originId: string) {
+    const next = gameData.origins.find((o) => o.id === originId);
+    if (!next) return;
+    if (next.kind === 'custom') delete build.value.originId;
+    else build.value.originId = next.id;
+    if (next.raceId) {
+      build.value.raceId = next.raceId;
+      if (next.subraceId) build.value.subraceId = next.subraceId;
+      else delete build.value.subraceId;
+    }
+    if (next.backgroundId) {
+      build.value.backgroundId = next.backgroundId;
+    } else if (gameData.backgrounds.find((b) => b.id === build.value.backgroundId)?.darkUrgeOnly) {
+      // Haunted One belongs to The Dark Urge; anyone else needs another background.
+      build.value.backgroundId = 'acolyte';
+    }
+    if (next.kind === 'origin' || next.kind === 'companion') name.value = next.name;
+    pruneStaleAnswers();
+  }
+
   function setRace(raceId: string) {
     build.value.raceId = raceId;
     delete build.value.subraceId;
@@ -108,6 +138,9 @@ export const useBuildStore = defineStore('build', () => {
   return {
     name,
     build,
+    origin,
+    locks,
+    setOrigin,
     character,
     choices,
     issues,

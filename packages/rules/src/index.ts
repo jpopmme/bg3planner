@@ -13,3 +13,4 @@ export type {
   SpellKind,
 } from './walker';
 export * from './party';
+export * from './party-summary';

@@ -1,6 +1,8 @@
 import {
   ABILITIES,
   type Ability,
+  SKILL_ABILITIES,
+  SKILLS,
   type Skill,
   abilityModifier,
   proficiencyBonus,
@@ -46,6 +48,7 @@ export interface DerivedSpell {
 
 export interface DerivedCharacter {
   level: number;
+  origin?: { id: string; name: string };
   /** In the order they were first taken. */
   classes: DerivedClass[];
   race?: { id: string; name: string };
@@ -61,8 +64,12 @@ export interface DerivedCharacter {
   proficiencyBonus: number;
   hitPoints: number;
   savingThrows: Ability[];
+  /** Total saving throw bonus per ability (modifier, plus proficiency where proficient). */
+  savingThrowBonuses: Record<Ability, number>;
   skills: Skill[];
   expertise: Skill[];
+  /** Total check bonus per skill (modifier, plus proficiency, doubled with expertise). */
+  skillBonuses: Record<Skill, number>;
   armour: ('light' | 'medium' | 'heavy')[];
   shields: boolean;
   weaponCategories: ('simple' | 'martial')[];
@@ -114,6 +121,7 @@ export function deriveCharacter(build: Build, data: GameData): DerivedCharacter 
   });
   for (const id of effectIds) hitPoints += (HIT_POINTS_PER_LEVEL[id] ?? 0) * level;
 
+  const origin = index.origins.get(build.originId ?? 'custom');
   const race = index.races.get(build.raceId);
   const subrace = race?.subraces.find((s) => s.id === build.subraceId);
   const background = index.backgrounds.get(build.backgroundId);
@@ -145,6 +153,7 @@ export function deriveCharacter(build: Build, data: GameData): DerivedCharacter 
   return {
     level,
     classes,
+    ...optional('origin', named(origin)),
     ...optional('race', named(race)),
     ...optional('subrace', named(subrace)),
     ...optional('background', named(background)),
@@ -158,6 +167,17 @@ export function deriveCharacter(build: Build, data: GameData): DerivedCharacter 
     proficiencyBonus: prof,
     hitPoints,
     savingThrows: ABILITIES.filter((a) => state.savingThrows.has(a)),
+    savingThrowBonuses: Object.fromEntries(
+      ABILITIES.map((a) => [a, abilityModifiers[a] + (state.savingThrows.has(a) ? prof : 0)]),
+    ) as Record<Ability, number>,
+    skillBonuses: Object.fromEntries(
+      SKILLS.map((skill) => [
+        skill,
+        abilityModifiers[SKILL_ABILITIES[skill]] +
+          (state.skills.has(skill) ? prof : 0) +
+          (state.expertise.has(skill) ? prof : 0),
+      ]),
+    ) as Record<Skill, number>,
     skills: [...state.skills].sort(),
     expertise: [...state.expertise].sort(),
     armour: (['light', 'medium', 'heavy'] as const).filter((a) => state.armour.has(a)),

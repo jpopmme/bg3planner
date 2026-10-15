@@ -1,4 +1,12 @@
-import { type Party, type PartyMember, migrateParty, partyOf } from '@bg3planner/rules';
+import { gameData } from '@bg3planner/gamedata';
+import {
+  MAX_ACTIVE,
+  MAX_ROSTER,
+  type Party,
+  type PartyMember,
+  migrateParty,
+  partyOf,
+} from '@bg3planner/rules';
 import { defineStore } from 'pinia';
 import { computed, ref, watch } from 'vue';
 import {
@@ -10,7 +18,7 @@ import {
   saveParty,
 } from '../lib/api';
 import { decodeParty, encodeParty } from '../lib/share';
-import { newBuild } from './new-build';
+import { buildForOrigin, newBuild } from './new-build';
 
 const STORAGE_KEY = 'bg3planner:party';
 /** Where the single-character planner (M3) kept its draft; read once and migrated. */
@@ -31,11 +39,14 @@ export type SyncStatus = 'local' | 'syncing' | 'synced' | 'offline' | 'conflict'
 export interface Viewing {
   party: Party;
   source: 'server' | 'link';
+  /** The party id or packed data it was opened from, so reopening the same link is free. */
+  key: string;
 }
 
 interface Saved {
   party: Party;
-  activeId: string;
+  /** The member being edited. */
+  selectedId: string;
   remote: RemoteLink | null;
   /** Changes not yet on the server. */
   dirty: boolean;
@@ -55,16 +66,18 @@ function readStorage(key: string): unknown {
 
 /** This device's saved party, upgraded if needed; falls back to the M3 draft, then to nothing. */
 function loadSaved(): Saved | undefined {
-  const saved = readStorage(STORAGE_KEY) as Partial<Saved> | undefined;
+  const saved = readStorage(STORAGE_KEY) as (Partial<Saved> & { activeId?: string }) | undefined;
   if (saved) {
     const result = migrateParty(saved.party);
     if (result.ok) {
-      const activeId = result.party.members.some((m) => m.id === saved.activeId)
-        ? saved.activeId!
+      // `activeId` is what M4 called the selected member.
+      const wanted = saved.selectedId ?? saved.activeId;
+      const selectedId = result.party.members.some((m) => m.id === wanted)
+        ? wanted!
         : result.party.members[0]!.id;
       return {
         party: result.party,
-        activeId,
+        selectedId,
         remote: saved.remote ?? null,
         dirty: saved.dirty ?? false,
       };
@@ -76,7 +89,7 @@ function loadSaved(): Saved | undefined {
     if (result.ok) {
       return {
         party: result.party,
-        activeId: result.party.members[0]!.id,
+        selectedId: result.party.members[0]!.id,
         remote: null,
         dirty: false,
       };
@@ -88,20 +101,23 @@ function loadSaved(): Saved | undefined {
 export const usePartyStore = defineStore('party', () => {
   const saved = loadSaved();
   const party = ref<Party>(saved?.party ?? freshParty());
-  const activeId = ref(saved?.activeId ?? party.value.members[0]!.id);
+  const selectedId = ref(saved?.selectedId ?? party.value.members[0]!.id);
   const remote = ref<RemoteLink | null>(saved?.remote ?? null);
   const dirty = ref(saved?.dirty ?? false);
   const status = ref<SyncStatus>(remote.value ? (dirty.value ? 'offline' : 'synced') : 'local');
   const conflict = ref<RemoteParty | null>(null);
   const viewing = ref<Viewing | null>(null);
   const lastError = ref<string | null>(null);
+  /** Why the link in the address bar could not be opened, if it could not. */
+  const linkProblem = ref<string | null>(null);
 
-  /** The character being shown: the viewed party's first member, or our active one. */
+  /** The party on screen: one opened from a link, or this device's own. */
+  const shownParty = computed(() => viewing.value?.party ?? party.value);
+  /** The character on screen. */
   const currentMember = computed<PartyMember>(
     () =>
-      viewing.value?.party.members[0] ??
-      party.value.members.find((m) => m.id === activeId.value) ??
-      party.value.members[0]!,
+      shownParty.value.members.find((m) => m.id === selectedId.value) ??
+      shownParty.value.members[0]!,
   );
   const readOnly = computed(() => viewing.value !== null);
   /** True when this device holds work that exists nowhere else and would be lost if replaced. */
@@ -121,7 +137,7 @@ export const usePartyStore = defineStore('party', () => {
     try {
       const data: Saved = {
         party: party.value,
-        activeId: activeId.value,
+        selectedId: selectedId.value,
         remote: remote.value,
         dirty: dirty.value,
       };
@@ -154,13 +170,13 @@ export const usePartyStore = defineStore('party', () => {
     // Synchronous, so `applyingRemote` is still set while server data is being applied.
     { deep: true, flush: 'sync' },
   );
-  watch([activeId, remote, dirty], persist, { deep: true });
+  watch([selectedId, remote, dirty], persist, { deep: true });
 
   function replaceParty(next: Party, link: RemoteLink | null) {
     applyingRemote = true;
     party.value = next;
     applyingRemote = false;
-    activeId.value = next.members[0]!.id;
+    selectedId.value = next.members[0]!.id;
     remote.value = link;
     dirty.value = false;
     conflict.value = null;
@@ -297,11 +313,13 @@ export const usePartyStore = defineStore('party', () => {
     link: { id: string; editToken?: string } | { encoded: string },
   ): Promise<'edit' | 'view' | 'own' | 'missing'> {
     if ('encoded' in link) {
+      if (viewing.value?.key === link.encoded) return 'view';
       const decoded = decodeParty(link.encoded);
       if (!decoded) return 'missing';
-      viewing.value = { party: decoded, source: 'link' };
+      viewing.value = { party: decoded, source: 'link', key: link.encoded };
       return 'view';
     }
+    if (!link.editToken && viewing.value?.key === link.id) return 'view';
     if (remote.value?.id === link.id) {
       if (link.editToken) remote.value.editToken = link.editToken;
       viewing.value = null;
@@ -322,7 +340,7 @@ export const usePartyStore = defineStore('party', () => {
       viewing.value = null;
       return 'edit';
     }
-    viewing.value = { party: server.party, source: 'server' };
+    viewing.value = { party: server.party, source: 'server', key: link.id };
     return 'view';
   }
 
@@ -335,6 +353,71 @@ export const usePartyStore = defineStore('party', () => {
     if (!viewing.value) return;
     replaceParty(clone(viewing.value.party), null);
     viewing.value = null;
+  }
+
+  // ---- Roster --------------------------------------------------------------------------------
+
+  function select(memberId: string) {
+    selectedId.value = memberId;
+  }
+
+  function setPartyName(name: string) {
+    party.value.name = name;
+  }
+
+  /** Origins already in the roster; each can only be there once (custom characters excepted). */
+  const takenOrigins = computed(
+    () =>
+      new Set(
+        party.value.members
+          .map((m) => m.build.originId)
+          .filter((id): id is string => !!id && id !== 'custom'),
+      ),
+  );
+
+  /** Adds a character for an origin, into the active party if there is room. Returns its id. */
+  function addMember(originId: string): string | undefined {
+    if (party.value.members.length >= MAX_ROSTER) return undefined;
+    const origin = gameData.origins.find((o) => o.id === originId);
+    if (!origin) return undefined;
+    const id = globalThis.crypto.randomUUID();
+    const named = origin.kind === 'origin' || origin.kind === 'companion';
+    party.value.members.push({ id, name: named ? origin.name : '', build: buildForOrigin(origin) });
+    if (party.value.activeMemberIds.length < MAX_ACTIVE) party.value.activeMemberIds.push(id);
+    return id;
+  }
+
+  /** A copy of a custom character (origins exist only once). Returns the copy's id. */
+  function duplicateMember(memberId: string): string | undefined {
+    const source = party.value.members.find((m) => m.id === memberId);
+    if (!source || party.value.members.length >= MAX_ROSTER) return undefined;
+    const id = globalThis.crypto.randomUUID();
+    party.value.members.push({
+      id,
+      name: source.name ? `${source.name} (copy)` : '',
+      build: clone(source.build),
+    });
+    return id;
+  }
+
+  /** Removes a character; the roster always keeps at least one. */
+  function removeMember(memberId: string) {
+    if (party.value.members.length <= 1) return;
+    party.value.members = party.value.members.filter((m) => m.id !== memberId);
+    party.value.activeMemberIds = party.value.activeMemberIds.filter((id) => id !== memberId);
+    if (selectedId.value === memberId) selectedId.value = party.value.members[0]!.id;
+  }
+
+  /** Moves a character between the active party and camp. Returns false if the party is full. */
+  function toggleActive(memberId: string): boolean {
+    const active = party.value.activeMemberIds;
+    if (active.includes(memberId)) {
+      party.value.activeMemberIds = active.filter((id) => id !== memberId);
+      return true;
+    }
+    if (active.length >= MAX_ACTIVE) return false;
+    active.push(memberId);
+    return true;
   }
 
   // ---- Files ------------------------------------------------------------------------------
@@ -366,13 +449,15 @@ export const usePartyStore = defineStore('party', () => {
 
   return {
     party,
-    activeId,
+    selectedId,
     remote,
     dirty,
     status,
     conflict,
     viewing,
     lastError,
+    linkProblem,
+    shownParty,
     currentMember,
     readOnly,
     hasUnsavedWork,
@@ -386,6 +471,13 @@ export const usePartyStore = defineStore('party', () => {
     openLink,
     stopViewing,
     copyViewed,
+    select,
+    setPartyName,
+    takenOrigins,
+    addMember,
+    duplicateMember,
+    removeMember,
+    toggleActive,
     exportJson,
     importJson,
     startOver,

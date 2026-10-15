@@ -4,6 +4,7 @@ import type {
   Feat,
   Feature,
   GameData,
+  Origin,
   OptionGroup,
   Race,
   Spell,
@@ -21,6 +22,7 @@ export interface DataIndex {
   subraces: Map<string, Subrace>;
   backgrounds: Map<string, Background>;
   feats: Map<string, Feat>;
+  origins: Map<string, Origin>;
   features: Map<string, Feature>;
   optionGroups: Map<string, OptionGroup>;
   spells: Map<string, Spell>;
@@ -42,6 +44,7 @@ export function indexData(data: GameData): DataIndex {
       subraces: byId(data.races.flatMap((r) => r.subraces)),
       backgrounds: byId(data.backgrounds),
       feats: byId(data.feats),
+      origins: byId(data.origins),
       features: byId(data.features),
       optionGroups: byId(data.optionGroups),
       spells: byId(data.spells),

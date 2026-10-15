@@ -51,6 +51,14 @@ Run the built server with `npm start -w @bg3planner/server`. It reads `PORT`, `H
 a throwaway database) from the environment. The web dev server reads `API_URL` to change its proxy
 target.
 
+## Parties
+
+The home page is your party: up to 12 characters, four of them in the active party and the rest
+at camp. **Add a character** creates a custom character, The Dark Urge, or one of the origin
+characters and companions, whose race, subrace and background are fixed as in the game (their
+class is free, as after a respec). Each origin can be in the roster once. **Who rolls best**
+compares the active party's skill and saving throw bonuses and lists who lacks darkvision.
+
 ## Saving and sharing
 
 The planner saves the party in the browser on every change, so a reload never loses work.

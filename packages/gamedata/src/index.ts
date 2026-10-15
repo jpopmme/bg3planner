@@ -3,6 +3,7 @@ import { classes, subclasses } from './data/classes';
 import { feats } from './data/feats';
 import { features } from './data/features';
 import { optionGroups } from './data/options';
+import { origins } from './data/origins';
 import { races } from './data/races';
 import { multiclassSpellSlots } from './data/spell-slots';
 import spells from './data/spells.json' with { type: 'json' };
@@ -26,6 +27,7 @@ export const gameData: GameData = {
   races,
   backgrounds,
   feats,
+  origins,
   features,
   optionGroups,
   // JSON imports type enums as plain strings; the schema test checks the real values.
