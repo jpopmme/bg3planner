@@ -880,6 +880,17 @@
     "wikiPage": "Speak with Animals"
   },
   {
+    "id": "star-map-guiding-bolt",
+    "name": "Star Map: Guiding Bolt",
+    "level": 1,
+    "school": "evocation",
+    "classes": [],
+    "concentration": false,
+    "ritual": false,
+    "actionType": "action",
+    "wikiPage": "Star Map: Guiding Bolt"
+  },
+  {
     "id": "tashas-hideous-laughter",
     "name": "Tasha's Hideous Laughter",
     "level": 1,
@@ -1098,6 +1109,17 @@
     "ritual": false,
     "actionType": "action",
     "wikiPage": "Enthrall"
+  },
+  {
+    "id": "eyes-of-the-dark-darkness",
+    "name": "Eyes of the Dark: Darkness",
+    "level": 2,
+    "school": "evocation",
+    "classes": [],
+    "concentration": true,
+    "ritual": false,
+    "actionType": "action",
+    "wikiPage": "Eyes of the Dark: Darkness"
   },
   {
     "id": "flame-blade",
@@ -2132,6 +2154,17 @@
     "ritual": false,
     "actionType": "action",
     "wikiPage": "Contagion"
+  },
+  {
+    "id": "destructive-wave",
+    "name": "Destructive Wave",
+    "level": 5,
+    "school": "evocation",
+    "classes": [],
+    "concentration": false,
+    "ritual": false,
+    "actionType": "action",
+    "wikiPage": "Destructive Wave"
   },
   {
     "id": "dispel-evil-and-good",

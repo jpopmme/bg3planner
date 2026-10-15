@@ -20,8 +20,7 @@ describe('roster', () => {
       subraceId: 'high-elf',
       backgroundId: 'charlatan',
     });
-    // Rogue is not in the planner yet, so he starts as a Fighter.
-    expect(astarion.build.levels[0]!.classId).toBe('fighter');
+    expect(astarion.build.levels[0]!.classId).toBe('rogue');
   });
 
   it('starts origins in their own class when the planner has it', () => {

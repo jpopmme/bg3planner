@@ -14,7 +14,13 @@ import { ABILITIES, type Ability, SKILLS, type Skill } from '@bg3planner/shared'
 import { importEquipment } from './equipment';
 import { type Named, matchName } from './match';
 import { extractPost } from './nuxt';
-import { type AbilityValue, type OverviewLevel, parseAbilityValue, readSections } from './sections';
+import {
+  type AbilityValue,
+  type OverviewLevel,
+  type OverviewLine,
+  parseAbilityValue,
+  readSections,
+} from './sections';
 import { cleanText, normaliseName } from './text';
 
 export type ImportNote = BuildSource['notes'][number];
@@ -43,15 +49,138 @@ function characterName(title: string): string {
   return (title.split(' - ')[0] ?? title).replace(/\s+build$/i, '').trim() || title;
 }
 
-/** Splits "A, B or C" into items, dropping fillers such as "etc.". */
-function items(value: string): string[] {
-  return value
-    .split(/,|\bor\b/i)
-    .map((s) => cleanText(s).replace(/\.$/, ''))
+/** Names that contain a separator themselves ("Create or Destroy Water", "Enlarge/Reduce"). */
+const unsplittable = new WeakMap<GameData, string[]>();
+
+/**
+ * Splits "A, B or C" (or "A/B") into items, dropping fillers such as "etc.", but keeps the
+ * spell names that contain " or " or "/" whole.
+ */
+function items(value: string, data: GameData): string[] {
+  let whole = unsplittable.get(data);
+  if (!whole) {
+    whole = data.spells.map((s) => s.name).filter((n) => / or |\//i.test(n));
+    unsplittable.set(data, whole);
+  }
+  const kept: string[] = [];
+  // "+1 Wisdom, +1 Constitution" is one feat's increases, not two items.
+  let text = value.replace(/(\+\d\s*[a-z]+)\s*,\s*(?=\+\d)/gi, '$1 ');
+  for (const name of whole) {
+    const at = text.toLowerCase().indexOf(name.toLowerCase());
+    if (at < 0) continue;
+    text = `${text.slice(0, at)}§${kept.length}§${text.slice(at + name.length)}`;
+    kept.push(name);
+  }
+  return text
+    .split(/,|\bor\b|\//i)
+    .map((s) => cleanText(s.replace(/§(\d+)§/g, (_, i: string) => kept[Number(i)]!)))
+    .map((s) => s.replace(/\.$/, ''))
     .filter((s) => s && !/^(etc|and so on)$/i.test(s));
 }
 
-const isOpen = (item: string) => /^any\b/i.test(item);
+const isOpen = (item: string) => /^any(thing)?\b/i.test(item);
+
+/** Words that every subclass of a kind shares and a guide's title leaves out. */
+const SUBCLASS_FILLER = new Set('the of college circle oath path way school domain'.split(' '));
+
+/** The subclass a title such as "Valour Bard Build" names, among `subclasses`. */
+function subclassFromTitle(title: string, subclasses: Named[]): Named | undefined {
+  const words = (text: string) =>
+    normaliseName(text)
+      .split(' ')
+      .filter((w) => w && !SUBCLASS_FILLER.has(w))
+      .map((w) => w.replace(/s$/, ''));
+  const inTitle = new Set(words(title));
+  const found = subclasses.filter((s) => {
+    const key = words(s.name);
+    return key.length > 0 && key.every((w) => inTitle.has(w));
+  });
+  return found.length === 1 ? found[0] : undefined;
+}
+
+/**
+ * The class at each level of a respec header such as "Respec Character:Level 1 - SorcererLevel
+ * 2-6 - ClericLevel 7 - Monk", or undefined if the text is not one.
+ */
+function respecPlan(text: string, data: GameData): string[] | undefined {
+  if (!/^respec character/i.test(text)) return undefined;
+  const plan: (string | undefined)[] = [];
+  const parts = text.matchAll(
+    /level\s*(\d+)(?:\s*-\s*(\d+))?\s*[-–]\s*([a-z]+?)(?=\s*\d*\s*(?:level|$))/gi,
+  );
+  for (const [, from, to, name] of parts) {
+    const id = matchName(name!, data.classes)?.id;
+    if (!id) return undefined;
+    for (let l = Number(from); l <= Number(to ?? from); l++) plan[l - 1] = id;
+  }
+  return plan.length && plan.every(Boolean) ? (plan as string[]) : undefined;
+}
+
+/**
+ * Many guides end their levelling with a respec into a different first level: "Fighter 1 (respec
+ * as first level)", a line saying to respec and start with the level's class, or a header laying
+ * out the new order ("Respec Character:Level 1 - Cleric 1Level 2-11 - Bard"). The planner keeps
+ * the final build, so the levels are put in the respecced order and renumbered.
+ */
+function applyRespec(levels: OverviewLevel[], data: GameData): OverviewLevel[] {
+  type Tagged = { entry: OverviewLevel; classId: string | undefined };
+  const tagged: Tagged[] = levels.map((entry) => ({
+    entry,
+    classId: matchName(className(entry.className), data.classes)?.id,
+  }));
+  let ordered: Tagged[] | undefined;
+  for (const [at, { entry, classId }] of tagged.entries()) {
+    if (at === 0) continue;
+    const plan = respecPlan(entry.className, data);
+    if (plan) {
+      // The header's own level is the one the levels so far lack (Cleric 1 above).
+      if (plan.length !== at + 1) return levels;
+      const before = tagged.slice(0, at);
+      const lacking = plan.find(
+        (id) => plan.filter((p) => p === id).length > before.filter((t) => t.classId === id).length,
+      );
+      if (!lacking) return levels;
+      const pool = [...before, { entry, classId: lacking }];
+      const reordered = plan.map((id) => {
+        const i = pool.findIndex((t) => t.classId === id);
+        return i < 0 ? undefined : pool.splice(i, 1)[0];
+      });
+      if (reordered.some((t) => !t)) return levels;
+      ordered = [...(reordered as Tagged[]), ...tagged.slice(at + 1)];
+      break;
+    }
+    const startsWithIt =
+      /respec as first level/i.test(entry.className) ||
+      entry.lines.some((line) => /\brespec\b.*\b(1st|first) level\b/i.test(line.value));
+    if (startsWithIt && classId) {
+      ordered = [tagged[at]!, ...tagged.filter((_, i) => i !== at)];
+      break;
+    }
+  }
+  if (!ordered || ordered[0]!.entry === levels[0]) return levels;
+  // The old first class's skills now come from the class taken first, where they fit.
+  const skills: QuietLine[] = (levels[0]?.lines ?? [])
+    .filter((line) => /^skills?$/i.test(line.label))
+    .map((line) => ({ ...line, quiet: true }));
+  return ordered.map(({ entry, classId }, i) => ({
+    ...entry,
+    level: i + 1,
+    className: data.classes.find((c) => c.id === classId)?.name ?? entry.className,
+    lines: [
+      ...entry.lines.filter((line) => !/\brespec\b/i.test(line.value)),
+      ...(i === 0 ? skills : []),
+    ],
+  }));
+}
+
+/** A line tried without notes when nothing fits: skills moved by a respec. */
+type QuietLine = OverviewLine & { quiet?: boolean };
+
+/**
+ * "Fighter 1(respec as first level)" → "Fighter". Also "Respec Character:Level 1 - Cleric 1Level
+ * 2-7 - Sorcerer" (Cleric 1 first, then the guide's levels so far), as `applyRespec` reads it.
+ */
+const className = (text: string) => text.replace(/\s*\d*\s*\(.*$/, '').trim();
 
 /** Ability increases written in a feat line, e.g. "Ability Improvement - +2 Charisma". */
 function abilityIncreases(text: string): Partial<Record<Ability, number>> {
@@ -145,8 +274,11 @@ type Kind =
   | { type: 'expertise' }
   /** Granted automatically (Domain, Oath and Circle spells) or cosmetic (a Cleric's deity). */
   | { type: 'automatic' }
-  /** Spells to prepare each day: a note, since the planner does not track preparation. */
-  | { type: 'prepare' }
+  /**
+   * Spells to prepare each day or to copy from scrolls: a note, since the planner tracks
+   * neither. `what` starts the note: "Spells to prepare".
+   */
+  | { type: 'note'; what: string }
   /** A choice the planner labels the same way ("Magical Secrets"). */
   | { type: 'labelled'; label: string }
   /** Unknown label: try any option choice at this level ("Circle of Land: Underdark"). */
@@ -157,8 +289,8 @@ function kindOf(label: string, data: GameData): Kind | undefined {
   const l = label.toLowerCase();
   if (/subclass/.test(l)) return { type: 'subclass' };
   if (/^(domain|oath|circle) spells?$|^deity$/.test(l)) return { type: 'automatic' };
-  if (/prepare/.test(l)) return { type: 'prepare' };
-  if (/^scribe/.test(l)) return { type: 'spell', prefer: 'regular' };
+  if (/prepare/.test(l)) return { type: 'note', what: 'Spells to prepare' };
+  if (/^scribe/.test(l)) return { type: 'note', what: 'Spells to copy from scrolls' };
   if (/expertise/.test(l)) return { type: 'expertise' };
   if (/fighting style/.test(l)) return { type: 'option', group: 'fighting-styles' };
   if (/invocation/.test(l)) return { type: 'option', group: 'eldritch-invocations' };
@@ -263,7 +395,13 @@ export function importGamestegyGuide(
   };
 
   // ---- Levels
-  const levels = [...sections.overview].sort((a, b) => a.level - b.level);
+  const sorted = [...sections.overview].sort((a, b) => a.level - b.level);
+  const levels = applyRespec(sorted, data);
+  if (levels !== sorted) {
+    note(
+      `The guide respecs to take ${className(levels[0]!.className)} first, so the build starts with it.`,
+    );
+  }
   if (!levels.length) {
     note('The guide has no levelling overview table, so no levels were imported.');
     const classId = post.buildData?.classes?.find((c) => data.classes.some((d) => d.id === c));
@@ -272,16 +410,16 @@ export function importGamestegyGuide(
 
   for (const entry of levels) {
     if (entry.level !== build.levels.length + 1 || entry.level > 12) continue;
-    const cls = matchName(entry.className, data.classes);
+    const cls = matchName(className(entry.className), data.classes);
     if (!cls) {
       note(
-        `${entry.className} is not in the planner yet, so levels from ${entry.level} on were not imported.`,
+        `The class at level ${entry.level} ("${entry.className}") is not one the planner knows, so levels from ${entry.level} on were not imported.`,
         entry.level,
       );
       break;
     }
     build.levels.push({ classId: cls.id, answers: {} });
-    importLevel(build, entry, data, note);
+    importLevel(build, entry, data, post.title, note);
   }
   if (build.levels.length === 0) build.levels.push({ classId: data.classes[0]!.id, answers: {} });
 
@@ -310,6 +448,7 @@ function importLevel(
   build: Build,
   entry: OverviewLevel,
   data: GameData,
+  title: string,
   note: (message: string, level?: number) => void,
 ) {
   const level = entry.level;
@@ -363,7 +502,22 @@ function importLevel(
   };
   const lines = [...entry.lines].sort((a, b) => order(a.label) - order(b.label));
 
-  for (const line of lines) {
+  // Guides for one subclass often never name it in the overview: take it from the title.
+  if (!lines.some((line) => kindOf(line.label, data)?.type === 'subclass')) {
+    for (const slot of slotsNow()) {
+      if (slot.choice.type !== 'subclass' || slot.answer !== undefined) continue;
+      const found = subclassFromTitle(title, candidates(slot, data, offered(slot)));
+      if (!found) continue;
+      answers[slot.key] = [found.id];
+      note(`${found.name}, from the guide's title.`, level);
+    }
+  }
+
+  for (const line of lines as QuietLine[]) {
+    if (line.quiet) {
+      for (const pick of items(line.value, data)) place(pick, (s) => s.key === 'class-skills');
+      continue;
+    }
     if (!line.label && abilitiesFromLine(line.value)) continue;
     if (/^abilities$/i.test(line.label)) continue;
     const labelled = slotsNow().find(
@@ -378,14 +532,14 @@ function importLevel(
       continue;
     }
     if (kind.type === 'automatic') continue;
-    if (kind.type === 'prepare') {
-      const named = items(line.value).filter((p) => !isOpen(p));
-      if (named.length) note(`Spells to prepare: ${named.join(', ')}.`, level);
+    if (kind.type === 'note') {
+      const named = items(line.value, data).filter((p) => !isOpen(p));
+      if (named.length) note(`${kind.what}: ${named.join(', ')}.`, level);
       continue;
     }
     // Clerics, Druids and Paladins pick no spells: a guide's spells are what to prepare.
     if (kind.type === 'spell' && kind.prefer === 'regular' && preparesWholeList()) {
-      const named = items(line.value).filter((p) => !isOpen(p));
+      const named = items(line.value, data).filter((p) => !isOpen(p));
       if (named.length) note(`Spells to prepare: ${named.join(', ')}.`, level);
       continue;
     }
@@ -421,7 +575,7 @@ function importLevel(
       continue;
     }
 
-    const picks = items(line.value);
+    const picks = items(line.value, data);
     if (picks.length === 0 || picks.every(isOpen)) {
       note(`The guide leaves ${line.label.toLowerCase()} open here.`, level);
       continue;
@@ -429,21 +583,39 @@ function importLevel(
 
     if (kind.type === 'feat') {
       // One feat per level: take the first suggestion that can be taken; the rest are notes.
+      // A suggestion the character cannot take (an ability already at 20) gives way to the next.
       const named = picks.filter((p) => !isOpen(p));
-      const first = named.find((p) => place(featName(p), (s) => s.choice.type === 'feat') === true);
-      const rest = named.filter((p) => p !== first);
-      if (first) {
-        {
-          const increases = abilityIncreases(first);
-          const followUp = slotsNow().filter((s) => s.key.startsWith('feat:'));
-          for (const slot of followUp) {
-            if (slot.choice.type === 'ability-increase' && Object.keys(increases).length) {
-              answers[slot.key] = increases;
-            } else if (answers[slot.key] === undefined) {
-              note(`Choose ${slot.label.toLowerCase()} for ${featName(first)}.`, level);
-            }
+      let first: string | undefined;
+      let followUpNotes: string[] = [];
+      for (const [i, pick] of named.entries()) {
+        const before = structuredClone(answers);
+        if (place(featName(pick), (s) => s.choice.type === 'feat') !== true) continue;
+        const increases = abilityIncreases(pick);
+        followUpNotes = [];
+        for (const slot of slotsNow().filter((s) => s.key.startsWith('feat:'))) {
+          if (slot.choice.type === 'ability-increase' && Object.keys(increases).length) {
+            answers[slot.key] = increases;
+          } else if (answers[slot.key] === undefined) {
+            followUpNotes.push(`Choose ${slot.label.toLowerCase()} for ${featName(pick)}.`);
           }
         }
+        const broken = validateBuild(build, data).some(
+          (issue) =>
+            issue.severity === 'error' &&
+            issue.characterLevel === level &&
+            !!issue.key?.startsWith('feat:'),
+        );
+        if (broken && i < named.length - 1) {
+          for (const key of Object.keys(answers)) delete answers[key];
+          Object.assign(answers, before);
+          continue;
+        }
+        first = pick;
+        break;
+      }
+      const rest = named.filter((p) => p !== first);
+      if (first) {
+        for (const message of followUpNotes) note(message, level);
       } else if (named.length) {
         note(`None of the suggested feats can be taken here: ${named.join(', ')}.`, level);
       }
@@ -458,6 +630,13 @@ function importLevel(
       let placed: boolean | 'full';
       if (kind.type === 'subclass') {
         placed = place(pick, (s) => s.choice.type === 'subclass');
+        // "Evocation" for Evocation School, "Giants" for Path of Giants.
+        const slot = slotsNow().find((s) => s.choice.type === 'subclass' && !s.answer);
+        const found = slot && subclassFromTitle(pick, candidates(slot, data, offered(slot)));
+        if (!placed && slot && found) {
+          answers[slot.key] = [found.id];
+          placed = true;
+        }
       } else if (kind.type === 'option') {
         placed = place(pick, (s) => s.choice.type === 'option' && s.choice.group === kind.group);
       } else if (kind.type === 'cantrip') {
@@ -474,13 +653,23 @@ function importLevel(
           pick,
           SKILLS.map((id) => ({ id, name: id.replace(/-/g, ' ') })),
         );
-        if (skill && deriveCharacter(build, data).skills.includes(skill.id as Skill)) continue;
-        // Class skills first; a race's free skill (Human) takes what is left.
-        placed = place(
-          pick,
-          (s) => s.choice.type === 'skill',
-          (s) => (s.key === 'class-skills' ? 0 : 1),
-        );
+        // A Skills line where only expertise is chosen (Rogue 6) names the expertise.
+        const now = slotsNow();
+        if (
+          !now.some((s) => s.choice.type === 'skill') &&
+          now.some((s) => s.choice.type === 'expertise')
+        ) {
+          placed = place(pick, (s) => s.choice.type === 'expertise');
+        } else if (skill && deriveCharacter(build, data).skills.includes(skill.id as Skill)) {
+          continue;
+        } else {
+          // Class skills first; a race's free skill (Human) takes what is left.
+          placed = place(
+            pick,
+            (s) => s.choice.type === 'skill',
+            (s) => (s.key === 'class-skills' ? 0 : 1),
+          );
+        }
       } else {
         const anySchool = (s: ChoiceSlot) => /any school/i.test(s.label);
         placed = place(

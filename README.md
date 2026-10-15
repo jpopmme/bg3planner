@@ -87,6 +87,16 @@ the **i** beside a picker option) for what it does, from bg3.wiki, with a link t
 The card closes with Escape or a click elsewhere; on phones it rises from the bottom. The footer
 picks a light or dark theme, or follows the system's.
 
+## Classes
+
+All twelve classes and their subclasses through Patch 8 are in the planner, levels 1–12 with
+multiclassing. Each level row asks for that level's choices: subclass, spells and cantrips, feats,
+fighting styles, invocations, metamagic, manoeuvres, Favoured Enemy and Natural Explorer, Circle of
+the Land spells, expertise and more. Domain, Oath and Circle spells show as always prepared.
+Clerics, Druids and Paladins prepare spells from their whole list and Wizards from their spellbook,
+so the sheet shows how many they prepare a day rather than a fixed list. The class data lives in
+`packages/gamedata/src/data/classes/`, one file per class, written from bg3.wiki.
+
 ## Parties
 
 The home page is your party: up to 12 characters, four of them in the active party and the rest
@@ -120,8 +130,9 @@ guide's link, or, if the server cannot fetch it, paste the page's source. The im
 guide's *Leveling Overview* table plus its race, background and ability tables, and places every
 pick with the rules engine, so only legal choices are imported. Its *Equipment Recommendations*
 fill each act's gear: the first item per slot that the rules allow, from the first setup, keeping
-the previous act's item where an act lists nothing new. A review screen shows what the guide leaves
-to you ("any spell", a spell to replace, alternative feats and items); those notes stay with the
+the previous act's item where an act lists nothing new. Guides that respec into a different first level
+("Fighter 1 (respec as first level)") are imported as the respecced build. A review screen shows
+what the guide leaves to you ("any spell", a spell to replace, alternative feats and items); those notes stay with the
 character next to their levels and acts.
 
 Only the parsed choices and short notes are stored, with a link back to the guide; guide text is

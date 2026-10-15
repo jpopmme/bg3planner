@@ -600,12 +600,17 @@ export function walkBuild(build: Build, data: GameData): WalkResult {
   };
 
   /** Spells a subclass level or an option keeps always prepared. */
-  const grantSpells = (ids: string[] | undefined, source: Source, ctx: ChoiceContext) => {
+  const grantSpells = (
+    ids: string[] | undefined,
+    source: Source,
+    ctx: ChoiceContext,
+    kind: 'granted' | 'innate' = 'granted',
+  ) => {
     for (const spellId of ids ?? []) {
-      if (state.spells.some((s) => s.spellId === spellId && s.kind === 'granted')) continue;
+      if (state.spells.some((s) => s.spellId === spellId && s.kind === kind)) continue;
       state.spells.push({
         spellId,
-        kind: 'granted',
+        kind,
         source,
         owner: ctx.owner,
         ...(ctx.ability ? { ability: ctx.ability } : {}),
@@ -780,7 +785,13 @@ export function walkBuild(build: Build, data: GameData): WalkResult {
         cls: subclass?.spellcasting ? { ...cls, spellcasting: subclass.spellcasting } : cls,
         ...(spellcasting ? { ability: spellcasting.ability } : {}),
       });
-      grantSpells(levelGrant.spells, source, ctx(`${prefix}:spells`));
+      // A class without spellcasting (Giant Barbarian, Shadow Monk) gets them as innate spells.
+      grantSpells(
+        levelGrant.spells,
+        source,
+        ctx(`${prefix}:spells`),
+        spellcasting ? 'granted' : 'innate',
+      );
       levelGrant.choices.forEach((choice, j) => {
         const key = `${prefix}:${j}`;
         handleChoice(choice, ctx(key), entry.answers[key]);

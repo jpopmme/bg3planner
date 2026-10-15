@@ -13,6 +13,6 @@ describe('referencedSpellIds', () => {
   it('does not collect ids that are not spells', () => {
     const ids = referencedSpellIds();
     expect(ids).not.toContain('warlock');
-    expect(ids).not.toContain('darkvision');
+    expect(ids).not.toContain('superior-darkvision'); // a racial feature
   });
 });

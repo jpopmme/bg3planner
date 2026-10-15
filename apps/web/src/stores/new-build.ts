@@ -23,7 +23,7 @@ export function buildForOrigin(origin: Origin): Build {
   if (origin.raceId) build.raceId = origin.raceId;
   if (origin.subraceId) build.subraceId = origin.subraceId;
   if (origin.backgroundId) build.backgroundId = origin.backgroundId;
-  // Classes not in the planner yet (Rogue, Wizard, ...) start as Fighter.
+  // Fighter only if the origin names a class the dataset lacks.
   const classId = gameData.classes.some((c) => c.id === origin.defaultClass)
     ? origin.defaultClass
     : 'fighter';

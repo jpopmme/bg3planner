@@ -134,3 +134,184 @@ describe.skipIf(!existsSync(fixture('two-handed-eldritch-knight')))(
     });
   },
 );
+
+/** Class, subclass and level of each class, in the order taken. */
+const classesOf = (name: string) =>
+  deriveCharacter(load(name).build, gameData).classes.map(
+    (c) => `${c.id}/${c.subclass?.id ?? '-'} ${c.level}`,
+  );
+const notesOf = (name: string) => load(name).notes.map((n) => `${n.level ?? '-'}: ${n.message}`);
+
+describe.skipIf(!existsSync(fixture('thief-build')))('Thief guide', () => {
+  const result = load('thief-build');
+  const character = deriveCharacter(result.build, gameData);
+
+  it('takes the subclass from the title and the expertise from a Skills line', () => {
+    expect(classesOf('thief-build')).toEqual(['rogue/thief 11', 'fighter/- 1']);
+    expect(character.expertise).toEqual(['deception', 'persuasion']);
+  });
+
+  it('takes Alert where +2 Dexterity would pass 20', () => {
+    expect(character.feats.map((f) => f.id)).toEqual([
+      'ability-improvement',
+      'sharpshooter',
+      'alert',
+    ]);
+    expect(result.issues.filter((i) => i.severity === 'error')).toEqual([]);
+  });
+});
+
+describe.skipIf(!existsSync(fixture('arcane-trickster-build')))('Arcane Trickster guide', () => {
+  it('starts with the Fighter level the guide respecs into', () => {
+    expect(classesOf('arcane-trickster-build')).toEqual([
+      'fighter/- 1',
+      'rogue/arcane-trickster 11',
+    ]);
+    expect(notesOf('arcane-trickster-build')).toContain(
+      '-: The guide respecs to take Fighter first, so the build starts with it.',
+    );
+  });
+});
+
+describe.skipIf(!existsSync(fixture('valour-bard-build')))('Valour Bard guide', () => {
+  it('reads "Respec Character: Level 1 - Cleric 1" as a Cleric level first', () => {
+    expect(classesOf('valour-bard-build')).toEqual([
+      'cleric/light-domain 2',
+      'bard/college-of-valour 10',
+    ]);
+    const spells = deriveCharacter(load('valour-bard-build').build, gameData).spells;
+    expect(spells.filter((s) => s.kind === 'extra').map((s) => s.id)).toEqual([
+      'counterspell',
+      'spirit-guardians',
+    ]);
+  });
+});
+
+describe.skipIf(!existsSync(fixture('blaster-tempest-cleric-build')))(
+  'Tempest Cleric guide',
+  () => {
+    const character = deriveCharacter(load('blaster-tempest-cleric-build').build, gameData);
+
+    it('grants the domain spells and notes the spells to prepare', () => {
+      expect(classesOf('blaster-tempest-cleric-build')).toEqual([
+        'sorcerer/storm-sorcery 3',
+        'cleric/tempest-domain 9',
+      ]);
+      expect(character.spells.filter((s) => s.kind === 'granted').map((s) => s.id)).toEqual(
+        expect.arrayContaining(['thunderwave', 'fog-cloud', 'destructive-wave', 'insect-plague']),
+      );
+      expect(notesOf('blaster-tempest-cleric-build')).toContain(
+        '2: Spells to prepare: Guiding Bolt, Command, Inflict Wounds, Sanctuary, Healing Word.',
+      );
+    });
+  },
+);
+
+describe.skipIf(!existsSync(fixture('land-druid-build')))('Circle of the Land guide', () => {
+  it('chooses a land at each circle-spell level', () => {
+    const character = deriveCharacter(load('land-druid-build').build, gameData);
+    expect(character.options).toMatchObject({
+      'land-circle-spells-3': ['underdark'],
+      'land-circle-spells-5': ['desert'],
+      'land-circle-spells-7': ['underdark'],
+      'land-circle-spells-9': ['arctic'],
+    });
+    expect(notesOf('land-druid-build')).toContain(
+      '2: Spells to prepare: Healing Word, Create or Destroy Water, Ice Knife, Faerie Fire.',
+    );
+  });
+});
+
+describe.skipIf(!existsSync(fixture('hunter-ranger-archer-build')))('Hunter Ranger guide', () => {
+  it('places favoured enemies, natural explorers and hunter options', () => {
+    const character = deriveCharacter(load('hunter-ranger-archer-build').build, gameData);
+    expect(classesOf('hunter-ranger-archer-build')).toEqual([
+      'ranger/hunter 11',
+      'cleric/war-domain 1',
+    ]);
+    expect(character.options).toEqual({
+      'ranger-favoured-enemies': ['bounty-hunter', 'ranger-knight'],
+      'ranger-natural-explorers': ['urban-tracker', 'wasteland-wanderer-fire'],
+      'fighting-styles': ['archery'],
+      'hunters-prey': ['horde-breaker'],
+      'hunter-defensive-tactics': ['multiattack-defence'],
+    });
+  });
+});
+
+describe.skipIf(!existsSync(fixture('oath-of-crown-paladin-build')))(
+  'Oath of the Crown guide',
+  () => {
+    it('grants the oath spells', () => {
+      const character = deriveCharacter(load('oath-of-crown-paladin-build').build, gameData);
+      expect(classesOf('oath-of-crown-paladin-build')).toEqual([
+        'paladin/oath-of-the-crown 11',
+        'warlock/the-hexblade 1',
+      ]);
+      expect(character.spells.filter((s) => s.kind === 'granted').map((s) => s.id)).toEqual([
+        'command',
+        'compelled-duel',
+        'warding-bond',
+        'spiritual-weapon',
+        'spirit-guardians',
+        'crusaders-mantle',
+      ]);
+    });
+  },
+);
+
+describe.skipIf(!existsSync(fixture('draconic-bloodline-sorcerer-build')))(
+  'Draconic Sorcerer guide',
+  () => {
+    it('places the ancestry and metamagic', () => {
+      const character = deriveCharacter(load('draconic-bloodline-sorcerer-build').build, gameData);
+      expect(character.options).toEqual({
+        'sorcerer-draconic-ancestry': ['blue'],
+        'sorcerer-metamagic': [
+          'twinned-spell',
+          'distant-spell',
+          'quickened-spell',
+          'heightened-spell',
+        ],
+      });
+    });
+  },
+);
+
+describe.skipIf(!existsSync(fixture('gale-evocation-wizard-build')))(
+  'Evocation Wizard guide',
+  () => {
+    it('matches "Evocation" to the school and notes scrolls to copy', () => {
+      expect(classesOf('gale-evocation-wizard-build')).toEqual([
+        'cleric/tempest-domain 2',
+        'wizard/evocation-school 10',
+      ]);
+      expect(notesOf('gale-evocation-wizard-build')).toContain(
+        '4: Spells to copy from scrolls: Misty Step, See Invisibility, Blindness, Hold Person.',
+      );
+    });
+  },
+);
+
+describe.skipIf(!existsSync(fixture('giant-barbarian-build')))('Giant Barbarian guide', () => {
+  it('matches "Giant" to Path of Giants, whose Thaumaturgy is innate', () => {
+    const character = deriveCharacter(load('giant-barbarian-build').build, gameData);
+    expect(classesOf('giant-barbarian-build')).toEqual(['barbarian/giant 10', 'fighter/- 2']);
+    expect(character.spells.map((s) => [s.id, s.kind])).toEqual([['thaumaturgy', 'innate']]);
+  });
+});
+
+describe.skipIf(!existsSync(fixture('radiating-armored-monk')))('Radiating Monk guide', () => {
+  it('follows the respec header to Sorcerer 1, Cleric 5, Monk 6', () => {
+    expect(classesOf('radiating-armored-monk')).toEqual([
+      'sorcerer/storm-sorcery 1',
+      'cleric/light-domain 5',
+      'monk/way-of-the-open-hand 6',
+    ]);
+    const character = deriveCharacter(load('radiating-armored-monk').build, gameData);
+    expect(character.feats.map((f) => f.id)).toEqual([
+      'ability-improvement',
+      'ability-improvement',
+    ]);
+  });
+});

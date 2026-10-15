@@ -2,9 +2,9 @@ export { importGamestegyGuide, type ImportNote, type ImportResult } from './game
 
 /**
  * Bumped whenever the importer reads guides differently, so cached results from an older importer
- * are not reused. 2: gear per act.
+ * are not reused. 2: gear per act. 3: all classes, respecs, subclasses from the title.
  */
-export const IMPORTER_VERSION = 2;
+export const IMPORTER_VERSION = 3;
 export { GuideFormatError, extractPost, type GuidePost } from './nuxt';
 export { matchName } from './match';
 

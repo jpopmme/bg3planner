@@ -49,7 +49,7 @@ const warlockGuide = guidePage(
           '<strong>Dance Moves:</strong> The Shuffle',
         ],
       },
-      { level: 5, className: 'Rogue 1', lines: ['<strong>Expertise:</strong> Stealth'] },
+      { level: 5, className: 'Artificer 1', lines: ['<strong>Expertise:</strong> Stealth'] },
     ]) +
     '<h2>Equipment Recommendations</h2>' +
     '<h3>Act 1</h3>' +
@@ -157,7 +157,7 @@ describe('importGamestegyGuide', () => {
   it('stops at a class the planner does not have', () => {
     expect(result.build.levels).toHaveLength(4);
     expect(notesAt(5)).toEqual([
-      'Rogue is not in the planner yet, so levels from 5 on were not imported.',
+      'The class at level 5 ("Artificer") is not one the planner knows, so levels from 5 on were not imported.',
     ]);
   });
 
@@ -199,6 +199,133 @@ describe('importGamestegyGuide', () => {
     ]);
     expect(result.build.equipment?.act3).toEqual(result.build.equipment?.act2);
     expect(gearNotes('act3')).toEqual(['The guide lists no gear table for Act 3.']);
+  });
+});
+
+const rogueLevel = (level: number, lines: string[] = []) => ({
+  level,
+  className: `Rogue ${level}`,
+  lines,
+});
+
+const thiefGuide = guidePage(
+  simpleTable('Races', ['Lightfoot Halfling']) +
+    simpleTable('Background', ['Charlatan']) +
+    overviewTable([
+      rogueLevel(1, [
+        'STR - 8, DEX - 17 (15+2), CON - 14, INT - 16 (15+1), WIS - 10, CHA - 8',
+        '<strong>Skills:</strong> Stealth, Acrobatics, Perception, Investigation',
+      ]),
+      rogueLevel(2),
+      rogueLevel(3),
+      rogueLevel(4, ['<strong>Feat:</strong> Ability Improvement - +2 Dexterity']),
+      rogueLevel(5),
+      rogueLevel(6, ['<strong>Skills:</strong> Stealth/Acrobatics']),
+      rogueLevel(7),
+      rogueLevel(8, ['<strong>Feat:</strong> Ability Improvement - +2 Dexterity OR Alert']),
+      {
+        level: 9,
+        className: 'Fighter 1(respec as first level)',
+        lines: ['<strong>Fighting Style:</strong> Archery'],
+      },
+    ]),
+  'Thief Rogue Build - Test',
+);
+
+describe('a single-subclass guide with a respec', () => {
+  const result = importGamestegyGuide(thiefGuide, gameData);
+  const answers = (level: number) => result.build.levels[level - 1]!.answers;
+  const notesAt = (level?: number) =>
+    result.notes.filter((n) => n.level === level && !n.act).map((n) => n.message);
+
+  it('moves the respec class to level 1', () => {
+    expect(result.build.levels.map((l) => l.classId)).toEqual([
+      'fighter',
+      ...Array(8).fill('rogue'),
+    ]);
+    expect(notesAt(undefined)).toContain(
+      'The guide respecs to take Fighter first, so the build starts with it.',
+    );
+    expect(answers(1)).toEqual({
+      'class:0': ['archery'],
+      'class-skills': ['acrobatics', 'perception'],
+    });
+    expect(answers(2)['multiclass-skills']).toEqual(['stealth']);
+    expect(notesAt(2)).toEqual(['Also suggested (skills): Investigation.']);
+  });
+
+  it('takes the subclass from the title when the overview never names it', () => {
+    expect(answers(4)['class:0']).toEqual(['thief']);
+    expect(notesAt(4)).toEqual(["Thief, from the guide's title."]);
+  });
+
+  it('reads a Skills line where only expertise is chosen as expertise', () => {
+    expect(answers(7)['class:0']).toEqual(['stealth', 'acrobatics']);
+  });
+
+  it('falls back to the next feat when an ability would pass 20', () => {
+    expect(answers(9)['class:0']).toEqual(['alert']);
+    expect(notesAt(9)).toEqual([
+      'Other feats the guide suggests: Ability Improvement - +2 Dexterity.',
+    ]);
+    expect(result.issues.filter((i) => i.severity === 'error')).toEqual([]);
+  });
+});
+
+describe('a guide with a respec plan', () => {
+  const clericLevel = (level: number, lines: string[] = []) => ({
+    level,
+    className: `Cleric ${level}`,
+    lines,
+  });
+  const result = importGamestegyGuide(
+    guidePage(
+      simpleTable('Races', ['Wood Half-Elf']) +
+        overviewTable([
+          clericLevel(1, [
+            '<strong>Subclass:</strong> Light Domain',
+            'STR - 8, DEX - 16, CON - 15, INT - 8, WIS - 17, CHA - 8',
+          ]),
+          clericLevel(2),
+          clericLevel(3),
+          clericLevel(4, [
+            '<strong>Feat:</strong> Ability Improvement - +1 Wisdom, +1 Constitution',
+          ]),
+          {
+            level: 5,
+            className: 'Sorcerer 1',
+            lines: ['<strong>Subclass:</strong> Storm Sorcery'],
+          },
+          {
+            level: 6,
+            className: 'Respec Character:Level 1 - SorcererLevel 2-5 - ClericLevel 6 - Monk',
+            lines: [],
+          },
+          { level: 7, className: 'Monk 2', lines: [] },
+        ]),
+      'Radiant Monk Build - Test',
+    ),
+    gameData,
+  );
+
+  it('puts the levels in the order the respec header gives', () => {
+    expect(result.build.levels.map((l) => l.classId)).toEqual([
+      'sorcerer',
+      'cleric',
+      'cleric',
+      'cleric',
+      'cleric',
+      'monk',
+      'monk',
+    ]);
+    expect(result.build.levels[1]!.answers['class:0']).toEqual(['light-domain']);
+  });
+
+  it('reads "+1 Wisdom, +1 Constitution" as one feat', () => {
+    expect(result.build.levels[4]!.answers).toMatchObject({
+      'class:0': ['ability-improvement'],
+      'feat:0': { wisdom: 1, constitution: 1 },
+    });
   });
 });
 

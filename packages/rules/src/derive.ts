@@ -33,7 +33,12 @@ const HIT_POINTS_PER_LEVEL: Record<string, number> = {
   tough: 2, // feat
 };
 const SPEED_BONUS: Record<string, number> = { mobile: 3 }; // feat
-const DARKVISION_RANGE: Record<string, number> = { darkvision: 12, 'superior-darkvision': 24 };
+const DARKVISION_RANGE: Record<string, number> = {
+  darkvision: 12,
+  'superior-darkvision': 24,
+  // Shadow Magic's name for Superior Darkvision.
+  'eyes-of-the-dark': 24,
+};
 /** Hit points per level of one class (Draconic Resilience: per Sorcerer level). */
 const HIT_POINTS_PER_CLASS_LEVEL: Record<string, { classId: string; amount: number }> = {
   'draconic-resilience': { classId: 'sorcerer', amount: 1 },

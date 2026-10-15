@@ -121,6 +121,14 @@ The planner is only as good as its dataset. Plan:
      saving throw and skill bonuses) are parsed so the sheet can apply them; everything else stays
      text. M7 also found that Hexblade's Hex Warrior granted no proficiencies; levels can now grant
      armour, shield and weapon proficiencies.
+   - *Learned adding the remaining classes:* each class is a bundle (class, subclasses, their
+     features and option groups) in `data/classes/`, checked on its own with `bundleIssues`.
+     They needed: always-prepared spells granted by levels and options (Domain, Oath and Circle
+     spells), options that grant skills, spells and proficiencies (Favoured Enemy), expertise
+     choices, weapon proficiencies by type (Druid scimitars, Bard rapiers), the one skill some
+     classes give when multiclassed into, and a class's `preparation` style (`known`,
+     `spellbook` or `whole-list`). Unarmoured Defence, Draconic Resilience, Fast and Unarmoured
+     Movement and Jack of All Trades are applied by the rules engine by feature id.
    - *Learned in M1:* BG3 differs from tabletop 5e on spell slots. A single class's caster level
      rounds **up** (Eldritch Knight 4 → caster level 2), while multiclass fractions are summed and
      then rounded **down**. The rules engine (M2) must follow this.
@@ -242,6 +250,13 @@ HTML (pasted / uploaded) ──────────────────�
   sometimes wrong (a dagger under "Shield"), so items go where their kind fits. Item names a guide
   writes bare ("Dark Justiciar Half-Plate") mean the rarest variant. The import cache key includes
   an `IMPORTER_VERSION`, so results from an older importer are not reused.
+- *Learned adding the remaining classes:* many guides end with a respec ("Fighter 1 (respec as
+  first level)", "Respec Character: Level 1 - Cleric 1 ...", or a line saying to respec and start
+  with a class); the importer moves that level to the front. Single-subclass guides often name the
+  subclass only in the title ("Valour Bard"), and "Evocation" means Evocation School. A Skills line
+  at an expertise level names the expertise. Clerics, Druids and Paladins prepare spells rather
+  than learn them, so their guides' spells, like "Scribe Spells" for a Wizard, become notes.
+  When a feat line's first suggestion would push an ability past 20, the next one is taken.
 - **Robustness:** every section parser is optional. A missing section produces a warning and does
   not fail the import. Unmatched entities go into `unresolved` for manual fixing.
 - **Tests:** a local snapshot of the Hexknight page plus 4–5 other guides covering different

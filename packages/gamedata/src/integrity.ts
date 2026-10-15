@@ -209,9 +209,8 @@ export function findIntegrityIssues(data: GameData): string[] {
       for (const id of lvl.spells ?? []) {
         const spell = spellsById.get(id);
         if (!spell) issues.push(`${where}: unknown spell "${id}"`);
-        else if (!caster || caster === 'innate')
-          issues.push(`${where}: grants spells without spellcasting`);
-        else if (spell.level > maxSpellLevel(caster, lvl.level)) {
+        // Without spellcasting the spell is innate, usable at once.
+        else if (caster && caster !== 'innate' && spell.level > maxSpellLevel(caster, lvl.level)) {
           issues.push(`${where}: grants "${id}" (level ${spell.level}) before it can be cast`);
         }
       }

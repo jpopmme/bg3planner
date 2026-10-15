@@ -326,7 +326,13 @@ export const druidFeatures = [
   { id: 'wild-shape-owlbear', name: 'Wild Shape: Owlbear', kind: 'action' },
   { id: 'wild-shape-dilophosaurus', name: 'Wild Shape: Dilophosaurus', kind: 'action' },
   // A section of the "Wild Shape" page; the "Wild Shape Improvement" title redirects there.
-  { id: 'wild-shape-improvement', name: 'Wild Shape Improvement', kind: 'passive' },
+  {
+    id: 'wild-shape-improvement',
+    name: 'Wild Shape Improvement',
+    kind: 'passive',
+    description:
+      'Beast form attacks deal an extra 1d4 or 1d6 damage, depending on the form and attack. The die grows one size at level 8 and again at level 12.',
+  },
   { id: 'wild-strike', name: 'Wild Strike', kind: 'passive' },
   { id: 'improved-wild-strike', name: 'Improved Wild Strike', kind: 'passive' },
   // Circle of the Land

@@ -53,6 +53,11 @@ export const featureSchema = z.object({
   kind: z.enum(['passive', 'action', 'reaction']),
   /** bg3.wiki page, when it differs from the name ("Unarmoured Defence (Monk)"). */
   wikiPage: z.string().min(1).optional(),
+  /**
+   * Our own short description, for the few features no bg3.wiki table describes (a heading on a
+   * class page, such as Abjuration Savant). Used only when the wiki has none.
+   */
+  description: z.string().min(1).optional(),
 });
 
 /** One pick in an option group (a fighting style, an invocation, a manoeuvre, ...). */
@@ -200,7 +205,8 @@ export const levelSchema = z
     skills: z.array(skillSchema).optional(),
     /**
      * Spells always prepared from this level on (Domain, Oath and Circle spells), cast with the
-     * class's spellcasting ability. They do not count against spells known or prepared.
+     * class's spellcasting ability. They do not count against spells known or prepared. For a
+     * class without spellcasting they are innate (a Giant Barbarian's Thaumaturgy).
      */
     spells: z.array(idSchema).min(1).optional(),
     /** Saving throw proficiencies gained at this level (Gloom Stalker's Iron Mind). */

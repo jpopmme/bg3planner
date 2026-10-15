@@ -21,7 +21,7 @@ export interface DescriptionSources {
 
 export interface Described {
   spells: Pick<Spell, 'id' | 'wikiPage'>[];
-  features: Pick<Feature, 'id' | 'name' | 'kind' | 'wikiPage'>[];
+  features: Pick<Feature, 'id' | 'name' | 'kind' | 'wikiPage' | 'description'>[];
   feats: Pick<Feat, 'id' | 'name'>[];
   optionGroups: Pick<OptionGroup, 'id' | 'name' | 'options'>[];
 }
@@ -128,7 +128,10 @@ export function toDescriptions(
 
   for (const feature of ours.features) {
     const names = feature.wikiPage ? [feature.wikiPage, feature.name] : [feature.name];
-    put(descriptionKey.feature(feature.id), find(names, feature.kind !== 'passive'));
+    put(
+      descriptionKey.feature(feature.id),
+      find(names, feature.kind !== 'passive') ?? feature.description,
+    );
   }
 
   const feats = featDescriptions(sources.featsHtml);
