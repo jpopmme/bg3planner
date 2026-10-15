@@ -68,8 +68,9 @@ bg3planner/
 │  ├─ web/          Vue 3 + Vite + TypeScript + Pinia + Vue Router (SPA)
 │  └─ server/       Node 20+ / Fastify + TypeScript + SQLite (Drizzle ORM)
 ├─ packages/
-│  ├─ shared/       Types, Zod schemas, the rules engine (pure TS, used by web and server)
-│  ├─ gamedata/     Versioned BG3 dataset (JSON) + build scripts that generate it
+│  ├─ shared/       Small shared helpers and types (abilities, skills, slugs)
+│  ├─ gamedata/     Versioned BG3 dataset + schema + the scripts that generate it
+│  ├─ rules/        Rules engine (pure TS, used by web and server)
 │  └─ importer/     Gamestegy parser (cheerio + devalue), used by the server
 └─ npm workspaces · Vitest · Playwright · ESLint/Prettier · GitHub Actions
 ```
@@ -85,7 +86,8 @@ SSR is wanted later, because the components would carry over.
 - Importer: `undici` (fetch), `devalue` (`unflatten` for the Nuxt payload), `cheerio`, and
   `fuse.js` (fuzzy name matching).
 
-**Rules engine (`packages/shared`)**
+**Rules engine (`packages/rules`)** — its own package because it depends on `gamedata`, which
+itself depends on `shared`.
 - A pure function `deriveCharacter(build, gameData) → DerivedCharacter`, with no Vue dependency,
   so it can be unit-tested heavily.
 - `availableChoices(build, level, gameData)` returns what the UI must ask at each level.

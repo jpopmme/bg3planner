@@ -1,0 +1,13 @@
+{
+  "name": "@bg3planner/rules",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Rules engine: derives a character sheet from a build and lists and validates its choices",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  }
+}
