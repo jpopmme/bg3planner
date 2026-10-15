@@ -12,7 +12,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { format, resolveConfig } from 'prettier';
-import { referencedSpellIds } from '../src/data/classes';
+import { referencedSpellIds } from '../src/data/references';
 import { spellSchema } from '../src/schema';
 import { CARGO_FIELDS, type CargoSpellRow, toSpells } from './spells';
 

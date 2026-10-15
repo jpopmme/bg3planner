@@ -50,12 +50,26 @@ describe('toSpells', () => {
 
   it('keeps class-less spells that class data names', () => {
     const rows = [
-      row({ name: 'Staggering Smite', classes: [''] }),
+      row({ page: 'Staggering Smite', name: 'Staggering Smite', classes: [''] }),
       row({ name: 'Other', classes: [''] }),
     ];
     expect(toSpells(rows, new Set(['staggering-smite'])).map((s) => s.id)).toEqual([
       'staggering-smite',
     ]);
+  });
+
+  it('keys class-less spells by page title', () => {
+    const rows = [row({ page: 'Enlarge (Duergar)', name: 'Enlarge', classes: [''] })];
+    expect(toSpells(rows, new Set(['enlarge-duergar']))[0]).toMatchObject({
+      id: 'enlarge-duergar',
+      name: 'Enlarge',
+      wikiPage: 'Enlarge (Duergar)',
+    });
+  });
+
+  it('allows a missing school', () => {
+    const rows = [row({ page: 'Enlarge (Duergar)', 'spell school': null, classes: [''] })];
+    expect(toSpells(rows, new Set(['enlarge-duergar']))[0]?.school).toBeNull();
   });
 
   it('fails when a named spell is missing from the export', () => {

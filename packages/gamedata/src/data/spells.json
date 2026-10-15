@@ -66,6 +66,17 @@
     "wikiPage": "Dancing Lights"
   },
   {
+    "id": "invisibility-duergar",
+    "name": "Duergar Invisibility",
+    "level": 0,
+    "school": null,
+    "classes": [],
+    "concentration": true,
+    "ritual": false,
+    "actionType": "action",
+    "wikiPage": "Invisibility (Duergar)"
+  },
+  {
     "id": "eldritch-blast",
     "name": "Eldritch Blast",
     "level": 0,
@@ -75,6 +86,17 @@
     "ritual": false,
     "actionType": "action",
     "wikiPage": "Eldritch Blast"
+  },
+  {
+    "id": "enlarge-duergar",
+    "name": "Enlarge",
+    "level": 0,
+    "school": null,
+    "classes": [],
+    "concentration": false,
+    "ritual": false,
+    "actionType": "action",
+    "wikiPage": "Enlarge (Duergar)"
   },
   {
     "id": "fire-bolt",
@@ -97,6 +119,17 @@
     "ritual": false,
     "actionType": "action",
     "wikiPage": "Friends"
+  },
+  {
+    "id": "githyanki-psionics-mage-hand",
+    "name": "Githyanki Psionics: Mage Hand",
+    "level": 0,
+    "school": "conjuration",
+    "classes": [],
+    "concentration": false,
+    "ritual": false,
+    "actionType": "action",
+    "wikiPage": "Githyanki Psionics: Mage Hand"
   },
   {
     "id": "guidance",
@@ -451,6 +484,17 @@
     "wikiPage": "Divine Favour"
   },
   {
+    "id": "drow-magic-faerie-fire",
+    "name": "Drow Magic: Faerie Fire",
+    "level": 1,
+    "school": "evocation",
+    "classes": [],
+    "concentration": true,
+    "ritual": false,
+    "actionType": "action",
+    "wikiPage": "Drow Magic: Faerie Fire"
+  },
+  {
     "id": "enhance-leap",
     "name": "Enhance Leap",
     "level": 1,
@@ -548,6 +592,17 @@
     "ritual": false,
     "actionType": "action",
     "wikiPage": "Fog Cloud"
+  },
+  {
+    "id": "githyanki-psionics-jump",
+    "name": "Githyanki Psionics: Jump",
+    "level": 1,
+    "school": "transmutation",
+    "classes": [],
+    "concentration": false,
+    "ritual": true,
+    "actionType": "action",
+    "wikiPage": "Githyanki Psionics: Jump"
   },
   {
     "id": "goodberry",
@@ -660,6 +715,17 @@
     "wikiPage": "Ice Knife"
   },
   {
+    "id": "infernal-legacy-hellish-rebuke",
+    "name": "Infernal Legacy: Hellish Rebuke",
+    "level": 1,
+    "school": "evocation",
+    "classes": [],
+    "concentration": false,
+    "ritual": false,
+    "actionType": "reaction",
+    "wikiPage": "Infernal Legacy: Hellish Rebuke"
+  },
+  {
     "id": "inflict-wounds",
     "name": "Inflict Wounds",
     "level": 1,
@@ -669,6 +735,28 @@
     "ritual": false,
     "actionType": "action",
     "wikiPage": "Inflict Wounds"
+  },
+  {
+    "id": "legacy-of-avernus-searing-smite",
+    "name": "Legacy of Avernus: Searing Smite",
+    "level": 1,
+    "school": "evocation",
+    "classes": [],
+    "concentration": true,
+    "ritual": false,
+    "actionType": "action",
+    "wikiPage": "Legacy of Avernus: Searing Smite"
+  },
+  {
+    "id": "legacy-of-cania-burning-hands",
+    "name": "Legacy of Cania: Burning Hands",
+    "level": 1,
+    "school": "evocation",
+    "classes": [],
+    "concentration": false,
+    "ritual": false,
+    "actionType": "action",
+    "wikiPage": "Legacy of Cania: Burning Hands"
   },
   {
     "id": "longstrider",
@@ -1087,6 +1175,28 @@
     "ritual": false,
     "actionType": "action",
     "wikiPage": "Knock"
+  },
+  {
+    "id": "legacy-of-avernus-branding-smite",
+    "name": "Legacy of Avernus: Branding Smite",
+    "level": 2,
+    "school": "evocation",
+    "classes": [],
+    "concentration": true,
+    "ritual": false,
+    "actionType": "action",
+    "wikiPage": "Legacy of Avernus: Branding Smite"
+  },
+  {
+    "id": "legacy-of-cania-flame-blade",
+    "name": "Legacy of Cania: Flame Blade",
+    "level": 2,
+    "school": "evocation",
+    "classes": [],
+    "concentration": false,
+    "ritual": false,
+    "actionType": "bonus",
+    "wikiPage": "Legacy of Cania: Flame Blade"
   },
   {
     "id": "lesser-restoration",

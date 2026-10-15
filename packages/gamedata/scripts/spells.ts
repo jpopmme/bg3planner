@@ -18,7 +18,7 @@ export interface CargoSpellRow {
   page: string;
   name: string;
   'spell level': number | string;
-  'spell school': string;
+  'spell school': string | null;
   'is npc': number | null;
   'is concentration': number | null;
   'is ritual': number | null;
@@ -58,9 +58,9 @@ export function decodeEntities(text: string): string {
 /**
  * Player spells that belong to at least one class list, sorted by level then name.
  *
- * `alsoInclude` keeps spells that class data names directly even though no class list has them,
- * such as Staggering Smite: a Paladin spell above any level BG3 Paladins reach, which Hexblades
- * get through their expanded spell list.
+ * `alsoInclude` keeps spells that hand-written data names directly even though no class list has
+ * them, such as racial variants ("Drow Magic: Faerie Fire") or Staggering Smite, a Paladin spell
+ * above any level BG3 Paladins reach that Hexblades get through their expanded spell list.
  */
 export function toSpells(
   rows: CargoSpellRow[],
@@ -77,7 +77,10 @@ export function toSpells(
       ),
     ].sort();
     const name = decodeEntities(row.name).trim();
-    const id = slugify(name);
+    const page = decodeEntities(row.page);
+    // Class spells are keyed by name. Class-less ones are often variants that share a name
+    // ("Enlarge" for Duergar), so they are keyed by their unique page title instead.
+    const id = slugify(classes.length > 0 ? name : page);
     if (classes.length === 0 && !alsoInclude.has(id)) continue;
 
     const previous = seen.get(id);
@@ -95,12 +98,14 @@ export function toSpells(
       id,
       name,
       level: Number(row['spell level']),
-      school: spellSchoolSchema.parse(row['spell school'].trim().toLowerCase()),
+      school: row['spell school']
+        ? spellSchoolSchema.parse(row['spell school'].trim().toLowerCase())
+        : null,
       classes,
       concentration: Boolean(row['is concentration']),
       ritual: Boolean(row['is ritual']),
       actionType,
-      wikiPage: decodeEntities(row.page),
+      wikiPage: page,
     });
   }
 

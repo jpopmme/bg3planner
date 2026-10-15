@@ -1,6 +1,6 @@
 import type { Feature } from '../schema';
 
-/** Features granted automatically by Fighter, Warlock and their subclasses. Names follow bg3.wiki. */
+/** Features granted automatically by classes, subclasses and races. Names follow bg3.wiki. */
 export const features = [
   // Fighter
   { id: 'second-wind', name: 'Second Wind', kind: 'action' },
@@ -54,4 +54,43 @@ export const features = [
   { id: 'hexblades-curse', name: "Hexblade's Curse", kind: 'action' },
   { id: 'accursed-spectre', name: 'Accursed Spectre', kind: 'reaction' },
   { id: 'armour-of-hexes', name: 'Armour of Hexes', kind: 'reaction' },
+  // Races: senses and weapon training
+  { id: 'darkvision', name: 'Darkvision', kind: 'passive' },
+  { id: 'superior-darkvision', name: 'Superior Darkvision', kind: 'passive' },
+  { id: 'civil-militia', name: 'Civil Militia', kind: 'passive' },
+  { id: 'elven-weapon-training', name: 'Elven Weapon Training', kind: 'passive' },
+  { id: 'drow-weapon-training', name: 'Drow Weapon Training', kind: 'passive' },
+  { id: 'dwarven-combat-training', name: 'Dwarven Combat Training', kind: 'passive' },
+  { id: 'dwarven-armour-training', name: 'Dwarven Armour Training', kind: 'passive' },
+  { id: 'martial-prodigy', name: 'Martial Prodigy', kind: 'passive' },
+  // Races: other traits
+  { id: 'human-versatility', name: 'Human Versatility', kind: 'passive' },
+  { id: 'fey-ancestry', name: 'Fey Ancestry', kind: 'passive' },
+  { id: 'relentless-endurance', name: 'Relentless Endurance', kind: 'passive' },
+  { id: 'savage-attacks', name: 'Savage Attacks', kind: 'passive' },
+  { id: 'halfling-luck', name: 'Halfling Luck', kind: 'passive' },
+  { id: 'brave', name: 'Brave', kind: 'passive' },
+  { id: 'naturally-stealthy', name: 'Naturally Stealthy', kind: 'passive' },
+  { id: 'strongheart-resilience', name: 'Strongheart Resilience', kind: 'passive' },
+  { id: 'dwarven-resilience', name: 'Dwarven Resilience', kind: 'passive' },
+  { id: 'dwarven-toughness', name: 'Dwarven Toughness', kind: 'passive' },
+  { id: 'duergar-resilience', name: 'Duergar Resilience', kind: 'passive' },
+  { id: 'gnome-cunning', name: 'Gnome Cunning', kind: 'passive' },
+  { id: 'shortened-stride', name: 'Shortened Stride', kind: 'passive' },
+  { id: 'artificers-lore', name: "Artificer's Lore", kind: 'passive' },
+  { id: 'stone-camouflage', name: 'Stone Camouflage', kind: 'passive' },
+  { id: 'hellish-resistance', name: 'Hellish Resistance', kind: 'passive' },
+  { id: 'astral-knowledge', name: 'Astral Knowledge', kind: 'action' },
+  // Dragonborn ancestries and breath weapons
+  { id: 'draconic-ancestry-acid', name: 'Draconic Ancestry (Acid)', kind: 'passive' },
+  { id: 'draconic-ancestry-cold', name: 'Draconic Ancestry (Cold)', kind: 'passive' },
+  { id: 'draconic-ancestry-fire', name: 'Draconic Ancestry (Fire)', kind: 'passive' },
+  { id: 'draconic-ancestry-lightning', name: 'Draconic Ancestry (Lightning)', kind: 'passive' },
+  { id: 'draconic-ancestry-poison', name: 'Draconic Ancestry (Poison)', kind: 'passive' },
+  { id: 'acid-breath', name: 'Acid Breath', kind: 'action' },
+  { id: 'fire-breath-cone', name: 'Fire Breath (Cone)', kind: 'action' },
+  { id: 'fire-breath-line', name: 'Fire Breath (Line)', kind: 'action' },
+  { id: 'frost-breath', name: 'Frost Breath', kind: 'action' },
+  { id: 'lightning-breath', name: 'Lightning Breath', kind: 'action' },
+  { id: 'poison-breath', name: 'Poison Breath', kind: 'action' },
 ] satisfies Feature[];

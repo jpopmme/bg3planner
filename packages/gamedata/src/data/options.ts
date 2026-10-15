@@ -50,6 +50,17 @@ export const optionGroups = [
     ],
   },
   {
+    id: 'elemental-adept-elements',
+    name: 'Elemental Adept element',
+    options: [
+      { id: 'acid', name: 'Acid' },
+      { id: 'cold', name: 'Cold' },
+      { id: 'fire', name: 'Fire' },
+      { id: 'lightning', name: 'Lightning' },
+      { id: 'thunder', name: 'Thunder' },
+    ],
+  },
+  {
     id: 'pact-boons',
     name: 'Pact Boon',
     options: [

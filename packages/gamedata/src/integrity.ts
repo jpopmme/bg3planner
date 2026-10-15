@@ -1,4 +1,15 @@
-import type { Choice, GameData, LevelGrant, Spell, SpellSource, Spellcasting } from './schema';
+import { SKILLS } from '@bg3planner/shared';
+import type {
+  Choice,
+  Feat,
+  GameData,
+  LevelGrant,
+  Race,
+  Spell,
+  SpellSource,
+  Spellcasting,
+  Subrace,
+} from './schema';
 
 /** Highest spell level castable at `classLevel`, or 0 before the class can cast. */
 export function maxSpellLevel(spellcasting: Spellcasting, classLevel: number): number {
@@ -7,52 +18,65 @@ export function maxSpellLevel(spellcasting: Spellcasting, classLevel: number): n
 }
 
 /**
+ * How spells chosen in a given place are cast: with a class's slots, innately (races and feats,
+ * which have their own once-per-rest rules), or not at all.
+ */
+type Caster = Spellcasting | 'innate' | undefined;
+
+/** Race, subrace and feat fields that grant things. */
+type Grant = Pick<
+  Race | Subrace | Feat,
+  'features' | 'weaponTypes' | 'innateSpells' | 'resources' | 'choices'
+>;
+
+/**
  * Cross-reference checks that a schema cannot express: unknown ids, impossible choices, and
  * per-level picks that disagree with the "known" tables. Returns one message per problem.
  */
 export function findIntegrityIssues(data: GameData): string[] {
   const issues: string[] = [];
 
-  const reportDuplicates = (kind: string, ids: string[]) => {
+  const subraces = data.races.flatMap((r) => r.subraces);
+  const idLists: [string, { id: string }[]][] = [
+    ['class', data.classes],
+    ['subclass', data.subclasses],
+    ['race', data.races],
+    ['subrace', subraces],
+    ['background', data.backgrounds],
+    ['feat', data.feats],
+    ['feature', data.features],
+    ['option group', data.optionGroups],
+    ['spell', data.spells],
+    ['weapon type', data.weaponTypes],
+    ...data.optionGroups.map((g): [string, { id: string }[]] => [`option in "${g.id}"`, g.options]),
+  ];
+  for (const [kind, items] of idLists) {
     const seen = new Set<string>();
-    for (const id of ids) {
+    for (const { id } of items) {
       if (seen.has(id)) issues.push(`duplicate ${kind} id "${id}"`);
       seen.add(id);
     }
-  };
-  reportDuplicates(
-    'class',
-    data.classes.map((c) => c.id),
-  );
-  reportDuplicates(
-    'subclass',
-    data.subclasses.map((s) => s.id),
-  );
-  reportDuplicates(
-    'feature',
-    data.features.map((f) => f.id),
-  );
-  reportDuplicates(
-    'option group',
-    data.optionGroups.map((g) => g.id),
-  );
-  reportDuplicates(
-    'spell',
-    data.spells.map((s) => s.id),
-  );
-  for (const group of data.optionGroups) {
-    reportDuplicates(
-      `option in "${group.id}"`,
-      group.options.map((o) => o.id),
-    );
   }
 
   const spellsById = new Map(data.spells.map((s) => [s.id, s]));
   const featureIds = new Set(data.features.map((f) => f.id));
   const groupsById = new Map(data.optionGroups.map((g) => [g.id, g]));
+  const weaponTypeIds = new Set(data.weaponTypes.map((w) => w.id));
   const spellLists = new Set(data.spells.flatMap((s) => s.classes));
+  const classResources = new Set(
+    [...data.classes, ...data.subclasses].flatMap((c) =>
+      c.levels.flatMap((l) => Object.keys(l.resources ?? {})),
+    ),
+  );
   const usedFeatures = new Set<string>();
   const usedGroups = new Set<string>();
+
+  const useFeatures = (where: string, ids: string[] | undefined) => {
+    for (const id of ids ?? []) {
+      usedFeatures.add(id);
+      if (!featureIds.has(id)) issues.push(`${where}: unknown feature "${id}"`);
+    }
+  };
 
   /** Spells a source can offer, or undefined (with an issue reported) if the source is broken. */
   const candidates = (where: string, from: SpellSource): Spell[] | undefined => {
@@ -72,12 +96,7 @@ export function findIntegrityIssues(data: GameData): string[] {
     return found;
   };
 
-  const checkChoice = (
-    where: string,
-    choice: Choice,
-    classLevel: number,
-    caster: Spellcasting | undefined,
-  ) => {
+  const checkChoice = (where: string, choice: Choice, classLevel: number, caster: Caster) => {
     switch (choice.type) {
       case 'subclass':
       case 'feat':
@@ -113,7 +132,7 @@ export function findIntegrityIssues(data: GameData): string[] {
         if (minLevel > choice.maxLevel) issues.push(`${where}: minLevel is above maxLevel`);
         if (!caster) {
           issues.push(`${where}: spell choice without spellcasting`);
-        } else if (!(choice.type === 'spell' && choice.extra)) {
+        } else if (caster !== 'innate' && !(choice.type === 'spell' && choice.extra)) {
           const castable = maxSpellLevel(caster, classLevel);
           if (choice.maxLevel > castable) {
             issues.push(
@@ -126,27 +145,68 @@ export function findIntegrityIssues(data: GameData): string[] {
           (s) =>
             s.level >= minLevel &&
             s.level <= choice.maxLevel &&
-            (!choice.schools || choice.schools.includes(s.school)),
+            (!choice.schools || (s.school !== null && choice.schools.includes(s.school))),
         );
         if (pool && pool.length < count) {
           issues.push(`${where}: picks ${count} spells from a pool of ${pool.length}`);
         }
         return;
       }
+      case 'ability-increase': {
+        if (choice.maxPerAbility > choice.points) {
+          issues.push(`${where}: maxPerAbility is above points`);
+        }
+        if (new Set(choice.from).size * choice.maxPerAbility < choice.points) {
+          issues.push(`${where}: cannot spend ${choice.points} points on the listed abilities`);
+        }
+        return;
+      }
+      case 'skill': {
+        const pool = choice.from ?? SKILLS;
+        if (pool.length < choice.count) {
+          issues.push(`${where}: picks ${choice.count} skills from a pool of ${pool.length}`);
+        }
+        return;
+      }
+      case 'weapon-proficiency': {
+        if (weaponTypeIds.size < choice.count) {
+          issues.push(`${where}: picks ${choice.count} of ${weaponTypeIds.size} weapon types`);
+        }
+        return;
+      }
     }
   };
 
-  const checkLevels = (owner: string, levels: LevelGrant[], caster: Spellcasting | undefined) => {
+  const checkLevels = (owner: string, levels: LevelGrant[], caster: Caster) => {
     for (const lvl of levels) {
       const where = `${owner} level ${lvl.level}`;
-      for (const id of lvl.features) {
-        usedFeatures.add(id);
-        if (!featureIds.has(id)) issues.push(`${where}: unknown feature "${id}"`);
-      }
+      useFeatures(where, lvl.features);
       lvl.choices.forEach((choice, i) =>
         checkChoice(`${where} choice ${i + 1} (${choice.type})`, choice, lvl.level, caster),
       );
     }
+  };
+
+  /** Races, subraces and feats: not tied to a class level, and their spells are innate. */
+  const checkGrant = (owner: string, grant: Grant) => {
+    useFeatures(owner, grant.features);
+    for (const id of grant.weaponTypes ?? []) {
+      if (!weaponTypeIds.has(id)) issues.push(`${owner}: unknown weapon type "${id}"`);
+    }
+    for (const { characterLevel, spell } of grant.innateSpells ?? []) {
+      if (!spellsById.has(spell)) {
+        issues.push(`${owner}: unknown spell "${spell}" at level ${characterLevel}`);
+      }
+    }
+    for (const id of Object.keys(grant.resources ?? {})) {
+      if (!classResources.has(id)) issues.push(`${owner}: unknown resource "${id}"`);
+    }
+    grant.choices?.forEach((choice, i) => {
+      if (choice.type === 'subclass' || choice.type === 'feat' || choice.type === 'replace-spell') {
+        issues.push(`${owner} choice ${i + 1}: "${choice.type}" only makes sense on a class level`);
+      }
+      checkChoice(`${owner} choice ${i + 1} (${choice.type})`, choice, 12, 'innate');
+    });
   };
 
   /** Cumulative cantrip and spell picks must match the caster's known-count tables. */
@@ -225,6 +285,12 @@ export function findIntegrityIssues(data: GameData): string[] {
       }
     }
   }
+
+  for (const race of data.races) {
+    checkGrant(race.name, race);
+    for (const sub of race.subraces) checkGrant(`${race.name} / ${sub.name}`, sub);
+  }
+  for (const feat of data.feats) checkGrant(`Feat ${feat.name}`, feat);
 
   for (const id of featureIds) {
     if (!usedFeatures.has(id)) issues.push(`feature "${id}" is never granted`);
