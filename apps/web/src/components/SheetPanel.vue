@@ -28,10 +28,12 @@ const spellGroups = computed(() => {
   const groups: { title: string; spells: DerivedSpell[] }[] = [
     { title: 'Cantrips', spells: [] },
     { title: 'Spells', spells: [] },
+    { title: 'Always prepared', spells: [] },
     { title: 'Innate', spells: [] },
   ];
   for (const s of c.value.spells) {
-    if (s.kind === 'innate') groups[2]!.spells.push(s);
+    if (s.kind === 'innate') groups[3]!.spells.push(s);
+    else if (s.kind === 'granted') groups[2]!.spells.push(s);
     else if (s.kind === 'cantrip') groups[0]!.spells.push(s);
     else groups[1]!.spells.push(s);
   }
@@ -125,7 +127,16 @@ const todo = computed(() => store.issues.filter((i) => i.severity === 'warning')
       </ul>
       <p v-for="caster in c.casters" :key="caster.classId" class="caster muted">
         {{ titleCase(caster.classId) }}: {{ titleCase(caster.ability) }}, save DC
-        {{ caster.saveDc }}, spell attack {{ signed(caster.attackBonus) }}
+        {{ caster.saveDc }}, spell attack {{ signed(caster.attackBonus)
+        }}<template v-if="caster.prepares"
+          >. Prepares {{ caster.prepares }} {{ caster.prepares === 1 ? 'spell' : 'spells' }} a day
+          from
+          {{
+            caster.preparation === 'spellbook'
+              ? 'its spellbook'
+              : `the whole ${titleCase(caster.classId)} list`
+          }}, up to level {{ caster.maxSpellLevel }}</template
+        >
       </p>
     </section>
 

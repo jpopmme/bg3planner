@@ -15,7 +15,7 @@ import { importEquipment } from './equipment';
 import { type Named, matchName } from './match';
 import { extractPost } from './nuxt';
 import { type AbilityValue, type OverviewLevel, parseAbilityValue, readSections } from './sections';
-import { cleanText } from './text';
+import { cleanText, normaliseName } from './text';
 
 export type ImportNote = BuildSource['notes'][number];
 
@@ -141,12 +141,25 @@ type Kind =
   | { type: 'spell'; prefer: 'regular' | 'any-school' | 'extra' }
   | { type: 'feat' }
   | { type: 'replace-spell' }
-  | { type: 'skill' };
+  | { type: 'skill' }
+  | { type: 'expertise' }
+  /** Granted automatically (Domain, Oath and Circle spells) or cosmetic (a Cleric's deity). */
+  | { type: 'automatic' }
+  /** Spells to prepare each day: a note, since the planner does not track preparation. */
+  | { type: 'prepare' }
+  /** A choice the planner labels the same way ("Magical Secrets"). */
+  | { type: 'labelled'; label: string }
+  /** Unknown label: try any option choice at this level ("Circle of Land: Underdark"). */
+  | { type: 'any-option' };
 
 /** What an overview label such as "Eldritch Invocations" asks for. */
-function kindOf(label: string): Kind | undefined {
+function kindOf(label: string, data: GameData): Kind | undefined {
   const l = label.toLowerCase();
   if (/subclass/.test(l)) return { type: 'subclass' };
+  if (/^(domain|oath|circle) spells?$|^deity$/.test(l)) return { type: 'automatic' };
+  if (/prepare/.test(l)) return { type: 'prepare' };
+  if (/^scribe/.test(l)) return { type: 'spell', prefer: 'regular' };
+  if (/expertise/.test(l)) return { type: 'expertise' };
   if (/fighting style/.test(l)) return { type: 'option', group: 'fighting-styles' };
   if (/invocation/.test(l)) return { type: 'option', group: 'eldritch-invocations' };
   if (/pact boon/.test(l)) return { type: 'option', group: 'pact-boons' };
@@ -159,7 +172,10 @@ function kindOf(label: string): Kind | undefined {
   if (/^spells?$/.test(l)) return { type: 'spell', prefer: 'regular' };
   if (/^feats?$/.test(l)) return { type: 'feat' };
   if (/^skills?$/.test(l)) return { type: 'skill' };
-  return undefined;
+  // Any other option group by its name, singular or plural ("Metamagic", "Favoured Enemy").
+  const wanted = normaliseName(label).replace(/s$/, '');
+  const group = data.optionGroups.find((g) => normaliseName(g.name).replace(/s$/, '') === wanted);
+  return group ? { type: 'option', group: group.id } : undefined;
 }
 
 /**
@@ -302,6 +318,15 @@ function importLevel(
   const taken = (slot: ChoiceSlot) =>
     Array.isArray(answers[slot.key]) ? (answers[slot.key] as string[]) : [];
   const offered = (slot: ChoiceSlot) => (slot.options.kind === 'ids' ? slot.options.ids : []);
+  /** Whether this level's class prepares from its whole list and has no spell picks. */
+  const preparesWholeList = () => {
+    const classId = build.levels[level - 1]!.classId;
+    const cls = data.classes.find((c) => c.id === classId);
+    return (
+      cls?.spellcasting?.preparation === 'whole-list' &&
+      !slotsNow().some((s) => s.choice.type === 'spell')
+    );
+  };
 
   /**
    * Puts one named pick into the first fitting choice (lowest `rank` first). Returns true when
@@ -316,8 +341,11 @@ function importLevel(
       .filter((s) => fits(s) && s.options.kind === 'ids')
       .sort((a, b) => rank(a) - rank(b));
     let matchedSomewhere = false;
+    // "Metamagic: Twinned Spell" names the pick after a label; try the part after it too.
+    const names = text.includes(': ') ? [text, text.slice(text.lastIndexOf(': ') + 2)] : [text];
     for (const slot of slots) {
-      const found = matchName(text, candidates(slot, data, offered(slot)));
+      const options = candidates(slot, data, offered(slot));
+      const found = names.map((n) => matchName(n, options)).find(Boolean);
       if (!found) continue;
       matchedSomewhere = true;
       if (taken(slot).includes(found.id)) return true;
@@ -330,7 +358,7 @@ function importLevel(
 
   // Subclasses and features first: they decide which other choices exist at this level.
   const order = (label: string) => {
-    const kind = kindOf(label)?.type;
+    const kind = kindOf(label, data)?.type;
     return kind === 'subclass' ? 0 : kind === 'feat' ? 2 : kind === 'replace-spell' ? 3 : 1;
   };
   const lines = [...entry.lines].sort((a, b) => order(a.label) - order(b.label));
@@ -338,9 +366,27 @@ function importLevel(
   for (const line of lines) {
     if (!line.label && abilitiesFromLine(line.value)) continue;
     if (/^abilities$/i.test(line.label)) continue;
-    const kind = kindOf(line.label);
+    const labelled = slotsNow().find(
+      (s) => line.label && normaliseName(s.label) === normaliseName(line.label),
+    );
+    const kind: Kind | undefined =
+      kindOf(line.label, data) ??
+      (labelled ? { type: 'labelled', label: labelled.label } : undefined) ??
+      (line.label ? { type: 'any-option' } : undefined);
     if (!kind) {
-      note(`Not understood: "${line.label ? `${line.label}: ` : ''}${line.value}".`, level);
+      note(`Not understood: "${line.value}".`, level);
+      continue;
+    }
+    if (kind.type === 'automatic') continue;
+    if (kind.type === 'prepare') {
+      const named = items(line.value).filter((p) => !isOpen(p));
+      if (named.length) note(`Spells to prepare: ${named.join(', ')}.`, level);
+      continue;
+    }
+    // Clerics, Druids and Paladins pick no spells: a guide's spells are what to prepare.
+    if (kind.type === 'spell' && kind.prefer === 'regular' && preparesWholeList()) {
+      const named = items(line.value).filter((p) => !isOpen(p));
+      if (named.length) note(`Spells to prepare: ${named.join(', ')}.`, level);
       continue;
     }
     // Replacements read "A -> B"; "any unused spell -> B" still names the new spell.
@@ -406,6 +452,7 @@ function importLevel(
     }
 
     const extras: string[] = [];
+    const unplaced: string[] = [];
     for (const pick of picks) {
       if (isOpen(pick)) continue;
       let placed: boolean | 'full';
@@ -415,6 +462,12 @@ function importLevel(
         placed = place(pick, (s) => s.choice.type === 'option' && s.choice.group === kind.group);
       } else if (kind.type === 'cantrip') {
         placed = place(pick, (s) => s.choice.type === 'cantrip');
+      } else if (kind.type === 'expertise') {
+        placed = place(pick, (s) => s.choice.type === 'expertise');
+      } else if (kind.type === 'labelled') {
+        placed = place(pick, (s) => s.label === kind.label);
+      } else if (kind.type === 'any-option') {
+        placed = place(pick, (s) => s.choice.type === 'option');
       } else if (kind.type === 'skill') {
         // Skills the background or race already grant need no pick.
         const skill = matchName(
@@ -439,8 +492,19 @@ function importLevel(
         );
       }
       if (placed === 'full') extras.push(pick);
-      else if (!placed)
+      else if (!placed) unplaced.push(pick);
+    }
+    // A label the importer only guessed at, with nothing placed: say so once.
+    if (
+      kind.type === 'any-option' &&
+      unplaced.length &&
+      unplaced.length === picks.filter((p) => !isOpen(p)).length
+    ) {
+      note(`Not understood: "${line.label}: ${line.value}".`, level);
+    } else {
+      for (const pick of unplaced) {
         note(`"${pick}" (${line.label.toLowerCase()}) could not be placed at this level.`, level);
+      }
     }
     if (extras.length)
       note(`Also suggested (${line.label.toLowerCase()}): ${extras.join(', ')}.`, level);

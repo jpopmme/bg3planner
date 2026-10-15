@@ -3,7 +3,9 @@ import { describe, expect, it } from 'vitest';
 import type { Build, Loadout } from './build';
 import { deriveCharacter } from './derive';
 import {
+  type UnarmouredDefence,
   applyAbilityEffects,
+  armourClassParts,
   equipmentIssues,
   itemConflicts,
   itemsForSlot,
@@ -263,5 +265,50 @@ describe('itemConflicts and partyIssues', () => {
     expect(clash(partyIssues(party, gameData))[0]?.message).toBe(
       'Act 3: Tav, Karlach and Gale all plan to use Ring of Protection, but there is only one.',
     );
+  });
+});
+
+describe('armourClassParts without armour', () => {
+  const modifiers = { dexterity: 3, constitution: 2, wisdom: 4 };
+  const effects = (unarmouredDefences: UnarmouredDefence[]) => ({
+    feats: [],
+    fightingStyles: [],
+    unarmouredDefences,
+  });
+  const total = (parts: { value: number }[]) => parts.reduce((sum, p) => sum + p.value, 0);
+
+  it('uses the best Unarmoured Defence', () => {
+    expect(armourClassParts({}, modifiers, effects([]))).toEqual([
+      { label: 'Unarmoured', value: 10 },
+      { label: 'Dexterity', value: 3 },
+    ]);
+    expect(armourClassParts({}, modifiers, effects(['barbarian']))).toEqual([
+      { label: 'Unarmoured Defence', value: 10 },
+      { label: 'Dexterity', value: 3 },
+      { label: 'Constitution', value: 2 },
+    ]);
+    expect(total(armourClassParts({}, modifiers, effects(['barbarian', 'monk'])))).toBe(17);
+    expect(total(armourClassParts({}, modifiers, effects(['draconic'])))).toBe(16);
+  });
+
+  it('keeps a shield with Barbarian but not Monk Unarmoured Defence', () => {
+    const shield = { meleeOff: item('adamantine-shield') };
+    expect(total(armourClassParts(shield, modifiers, effects(['barbarian'])))).toBe(17);
+    expect(total(armourClassParts(shield, modifiers, effects(['monk'])))).toBe(15); // 10 + 3 + 2
+  });
+
+  it('counts robes as no armour, keeping their bonus', () => {
+    const robe = { armour: item('robe-of-the-weave') };
+    expect(armourClassParts(robe, modifiers, effects(['monk']))).toEqual([
+      { label: 'Unarmoured Defence', value: 10 },
+      { label: 'Dexterity', value: 3 },
+      { label: 'Wisdom', value: 4 },
+      { label: 'Robe of the Weave', value: 2 },
+    ]);
+  });
+
+  it('ignores Unarmoured Defence in armour', () => {
+    const armour = { armour: item('bhaalist-armour') };
+    expect(total(armourClassParts(armour, modifiers, effects(['barbarian'])))).toBe(17); // 14 + 3
   });
 });

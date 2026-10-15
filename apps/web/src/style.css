@@ -8,8 +8,19 @@
   --accent-soft: #e4e1f7;
   --warning: #895a17;
   --error: #b42318;
-  --class-fighter: #a4513a;
+  /* Class colours carry white text (level markers): all 5:1 or more, in both themes. */
+  --class-barbarian: #a8322d;
+  --class-bard: #a33d97;
+  --class-cleric: #6f7036;
+  --class-druid: #2e7d4f;
+  --class-fighter: #7f5539;
+  --class-monk: #1f7480;
+  --class-paladin: #93650c;
+  --class-ranger: #4f7120;
+  --class-rogue: #4a5568;
+  --class-sorcerer: #a1295f;
   --class-warlock: #6b3fa0;
+  --class-wizard: #2f5fb3;
   /* Item rarities in the game's colours, darkened to 4.5:1 or more on every light background. */
   --rarity-uncommon: #297235;
   --rarity-rare: #2160ad;
@@ -44,8 +55,6 @@
     --accent-soft: #2c2850;
     --warning: #e0a84a;
     --error: #f0786b;
-    --class-fighter: #d0785e;
-    --class-warlock: #a77ad6;
     --rarity-uncommon: #6cc27a;
     --rarity-rare: #6ea8f0;
     --rarity-very-rare: #b78ceb;
@@ -64,8 +73,6 @@
   --accent-soft: #2c2850;
   --warning: #e0a84a;
   --error: #f0786b;
-  --class-fighter: #d0785e;
-  --class-warlock: #a77ad6;
   --rarity-uncommon: #6cc27a;
   --rarity-rare: #6ea8f0;
   --rarity-very-rare: #b78ceb;
