@@ -13,3 +13,6 @@ coverage/
 # saved guide pages used as private importer fixtures
 packages/importer/fixtures/private/
 apps/server/data/
+package-lock.json
+package.json
+package.json
