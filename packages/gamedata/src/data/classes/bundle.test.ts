@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { ClassDef } from '../../schema';
 import { bundleIssues } from './bundle';
 import { fighter, fighterSubclasses } from './fighter';
 
@@ -17,7 +18,10 @@ describe('bundleIssues', () => {
   it('reports problems in the bundle, its own unused features and pending spells', () => {
     const broken = {
       ...fighterBundle,
-      cls: { ...fighter, levels: fighter.levels.map((l) => ({ ...l, features: [...l.features] })) },
+      cls: {
+        ...fighter,
+        levels: fighter.levels.map((l) => ({ ...l, features: [...l.features] })),
+      } as ClassDef,
       features: [{ id: 'spare', name: 'Spare', kind: 'passive' as const }],
     };
     broken.cls.levels[0]!.features.push('nope');

@@ -267,7 +267,18 @@ export function findIntegrityIssues(data: GameData): string[] {
 
   const classesById = new Map(data.classes.map((c) => [c.id, c]));
 
+  const checkWeaponTypes = (where: string, ids: string[] | undefined) => {
+    for (const id of ids ?? []) {
+      if (!weaponTypeIds.has(id)) issues.push(`${where}: unknown weapon type "${id}"`);
+    }
+  };
+
   for (const cls of data.classes) {
+    checkWeaponTypes(cls.name, cls.proficiencies.weaponTypes);
+    checkWeaponTypes(`${cls.name} (multiclass)`, cls.multiclassProficiencies.weaponTypes);
+    for (const lvl of cls.levels) {
+      checkWeaponTypes(`${cls.name} level ${lvl.level}`, lvl.proficiencies?.weaponTypes);
+    }
     checkLevels(cls.name, cls.levels, cls.spellcasting);
     if (cls.spellcasting) checkKnownCounts(cls.name, cls.levels, cls.spellcasting);
 
@@ -301,6 +312,9 @@ export function findIntegrityIssues(data: GameData): string[] {
     }
 
     const caster = sub.spellcasting ?? cls.spellcasting;
+    for (const lvl of sub.levels) {
+      checkWeaponTypes(`${sub.name} level ${lvl.level}`, lvl.proficiencies?.weaponTypes);
+    }
     checkLevels(sub.name, sub.levels, caster);
     if (sub.spellcasting) checkKnownCounts(sub.name, sub.levels, sub.spellcasting);
 

@@ -706,6 +706,20 @@ export function walkBuild(build: Build, data: GameData): WalkResult {
       profs.armour.forEach((a) => state.armour.add(a));
       if (profs.shields) state.shields = true;
       profs.weapons.forEach((w) => state.weaponCategories.add(w));
+      profs.weaponTypes?.forEach((w) => state.weaponTypes.add(w));
+      if (characterLevel > 1 && cls.multiclassSkills) {
+        handleChoice(
+          { type: 'skill', count: cls.multiclassSkills, from: cls.skillChoices.from },
+          {
+            characterLevel,
+            key: 'multiclass-skills',
+            source: classSource,
+            classLevel,
+            owner: `class:${cls.id}`,
+          },
+          entry.answers['multiclass-skills'],
+        );
+      }
     }
 
     if (characterLevel === 1) {
@@ -748,9 +762,11 @@ export function walkBuild(build: Build, data: GameData): WalkResult {
       if (!levelGrant) return;
       addFeatures(levelGrant.features, source);
       levelGrant.skills?.forEach((s) => state.skills.add(s as Skill));
+      levelGrant.savingThrows?.forEach((a) => state.savingThrows.add(a));
       levelGrant.proficiencies?.armour?.forEach((a) => state.armour.add(a));
       if (levelGrant.proficiencies?.shields) state.shields = true;
       levelGrant.proficiencies?.weapons?.forEach((w) => state.weaponCategories.add(w));
+      levelGrant.proficiencies?.weaponTypes?.forEach((w) => state.weaponTypes.add(w));
       for (const [id, total] of Object.entries(levelGrant.resources ?? {})) {
         state.classResources.set(id, total);
       }

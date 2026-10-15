@@ -184,6 +184,8 @@ const proficienciesSchema = z
     armour: z.array(z.enum(['light', 'medium', 'heavy'])),
     shields: z.boolean(),
     weapons: z.array(z.enum(['simple', 'martial'])),
+    /** Single weapon types on top of the categories (a Monk's shortswords, a Rogue's rapiers). */
+    weaponTypes: z.array(idSchema).optional(),
   })
   .strict();
 
@@ -201,6 +203,8 @@ export const levelSchema = z
      * class's spellcasting ability. They do not count against spells known or prepared.
      */
     spells: z.array(idSchema).min(1).optional(),
+    /** Saving throw proficiencies gained at this level (Gloom Stalker's Iron Mind). */
+    savingThrows: z.array(abilitySchema).min(1).optional(),
     /** Armour and weapon proficiencies gained at this level (Hexblade's Hex Warrior). */
     proficiencies: proficienciesSchema.partial().optional(),
   })
@@ -276,6 +280,8 @@ export const classSchema = z
     proficiencies: proficienciesSchema,
     /** What taking this class as a second (or later) class grants. */
     multiclassProficiencies: proficienciesSchema,
+    /** Skills picked (from `skillChoices.from`) when taking this class as a later class. */
+    multiclassSkills: positiveInt.optional(),
     subclassLevel: classLevelSchema,
     spellcasting: spellcastingSchema.optional(),
     /** Exactly one entry per class level, in order. */
