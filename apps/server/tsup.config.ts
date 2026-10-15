@@ -8,4 +8,6 @@ export default defineConfig({
   clean: true,
   // Workspace packages ship TypeScript source, so they are bundled rather than imported at runtime.
   noExternal: [/^@bg3planner\//],
+  // Keep `node:` prefixes: `node:sqlite` only exists with the prefix.
+  removeNodeProtocol: false,
 });

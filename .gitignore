@@ -12,3 +12,4 @@ coverage/
 *.db-journal
 # saved guide pages used as private importer fixtures
 packages/importer/fixtures/private/
+apps/server/data/

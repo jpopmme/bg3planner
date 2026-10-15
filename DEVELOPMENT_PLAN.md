@@ -82,7 +82,9 @@ SSR is wanted later, because the components would carry over.
 **Key libraries**
 - Web: `vue@3`, `pinia` (+ `pinia-plugin-persistedstate`), `vue-router`, `@vueuse/core`,
   a UI kit (PrimeVue or Naive UI), and `lz-string` for share-link compression.
-- Server: `fastify`, `@fastify/rate-limit`, `drizzle-orm` + `better-sqlite3`, `zod`.
+- Server: `fastify`, `@fastify/rate-limit`, `zod`, and Node's built-in `node:sqlite` with plain
+  SQL. *Changed in M4:* the plan said Drizzle + better-sqlite3, but one table does not need an ORM,
+  and the built-in driver needs no native build.
 - Importer: `undici` (fetch), `devalue` (`unflatten` for the Nuxt payload), `cheerio`, and
   `fuse.js` (fuzzy name matching).
 
@@ -168,7 +170,10 @@ interface LevelChoice {
 }
 ```
 
-**Server tables:** `parties(id, owner_token, data JSON, updated_at)`, `import_cache(url, fetched_at, html_hash, result JSON)`.
+**Server tables:** `parties(id, data JSON, revision, edit_token_hash, created_at, updated_at)`
+(M4), and later `import_cache(url, fetched_at, html_hash, result JSON)` (M6). Saves send the
+revision they were based on; a stale revision gets HTTP 409 so edits from two devices never
+silently overwrite each other.
 At first, ownership is an **edit token** created when a party is first saved. It is stored in localStorage and sent as a header,
 so editing needs no accounts. The read-only share URL is `/p/:id`.
 

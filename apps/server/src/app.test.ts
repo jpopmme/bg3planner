@@ -1,9 +1,10 @@
 import { GAME_DATA_VERSION } from '@bg3planner/gamedata';
 import { afterAll, describe, expect, it } from 'vitest';
 import { buildApp } from './app';
+import { PartyStore } from './party-store';
 
 describe('GET /api/health', () => {
-  const app = buildApp();
+  const app = buildApp({ store: new PartyStore(':memory:') });
   afterAll(() => app.close());
 
   it('reports status and data version', async () => {

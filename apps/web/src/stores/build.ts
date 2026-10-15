@@ -1,67 +1,34 @@
-import { GAME_DATA_VERSION, gameData } from '@bg3planner/gamedata';
+import { gameData } from '@bg3planner/gamedata';
 import {
   type Answer,
   type Build,
   availableChoices,
   deriveCharacter,
-  parseBuild,
   validateBuild,
 } from '@bg3planner/rules';
 import { ABILITIES, type Ability } from '@bg3planner/shared';
 import { defineStore } from 'pinia';
-import { computed, ref, watch } from 'vue';
+import { computed } from 'vue';
+import { newBuild } from './new-build';
+import { usePartyStore } from './party';
 
-const DRAFT_KEY = 'bg3planner:draft';
+export { newBuild };
 
-/** A fresh level-1 character: every score at 8, nothing chosen yet. */
-export function newBuild(): Build {
-  return {
-    gameDataVersion: GAME_DATA_VERSION,
-    raceId: 'human',
-    backgroundId: 'acolyte',
-    abilities: {
-      base: Object.fromEntries(ABILITIES.map((a) => [a, 8])) as Record<Ability, number>,
-      racialBonus: {},
-    },
-    levels: [{ classId: 'fighter', answers: {} }],
-  };
-}
-
-/** The draft saved by the previous visit, if it is still a valid build. */
-function loadDraft(): { name: string; build: Build } | undefined {
-  try {
-    const raw = localStorage.getItem(DRAFT_KEY);
-    if (!raw) return undefined;
-    const saved = JSON.parse(raw) as { name?: unknown; build?: unknown };
-    const parsed = parseBuild(saved.build);
-    if (!parsed.ok) return undefined;
-    return { name: typeof saved.name === 'string' ? saved.name : '', build: parsed.build };
-  } catch {
-    return undefined;
-  }
-}
-
+/** The character being edited (the party's active member) and everything derived from it. */
 export const useBuildStore = defineStore('build', () => {
-  const draft = loadDraft();
-  const name = ref(draft?.name ?? '');
-  const build = ref<Build>(draft?.build ?? newBuild());
+  const party = usePartyStore();
+  const name = computed({
+    get: () => party.currentMember.name,
+    set: (value: string) => (party.currentMember.name = value),
+  });
+  const build = computed({
+    get: () => party.currentMember.build,
+    set: (value: Build) => (party.currentMember.build = value),
+  });
 
   const character = computed(() => deriveCharacter(build.value, gameData));
   const choices = computed(() => availableChoices(build.value, gameData));
   const issues = computed(() => validateBuild(build.value, gameData));
-
-  // Until real saving arrives (M4), keep a draft so a reload does not lose work.
-  watch(
-    [name, build],
-    () => {
-      try {
-        localStorage.setItem(DRAFT_KEY, JSON.stringify({ name: name.value, build: build.value }));
-      } catch {
-        // Storage can be unavailable (private mode, quota); the planner still works.
-      }
-    },
-    { deep: true },
-  );
 
   /** Drops answers whose choice no longer exists, e.g. after changing race or a level's class. */
   function pruneStaleAnswers() {
@@ -138,11 +105,6 @@ export const useBuildStore = defineStore('build', () => {
     pruneStaleAnswers();
   }
 
-  function reset() {
-    name.value = '';
-    build.value = newBuild();
-  }
-
   return {
     name,
     build,
@@ -158,6 +120,5 @@ export const useBuildStore = defineStore('build', () => {
     addLevel,
     removeLastLevel,
     setAnswer,
-    reset,
   };
 });

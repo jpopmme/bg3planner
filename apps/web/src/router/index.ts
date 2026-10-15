@@ -3,6 +3,10 @@ import PlannerView from '../views/PlannerView.vue';
 
 export const routes: RouteRecordRaw[] = [
   { path: '/', name: 'planner', component: PlannerView },
+  // An online party; `#edit=<token>` makes it editable on this device.
+  { path: '/p/:id', name: 'party-link', component: PlannerView },
+  // A snapshot packed into the URL after `#`.
+  { path: '/s', name: 'snapshot-link', component: PlannerView },
   {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
