@@ -353,6 +353,23 @@ export const featSchema = z
   })
   .strict();
 
+/**
+ * Who a character is. Origin characters and companions have a fixed race, subrace and background;
+ * a custom character chooses all three, and The Dark Urge chooses race and subrace.
+ */
+export const originSchema = z
+  .object({
+    id: idSchema,
+    name: z.string().min(1),
+    kind: z.enum(['custom', 'dark-urge', 'origin', 'companion']),
+    raceId: idSchema.optional(),
+    subraceId: idSchema.optional(),
+    backgroundId: idSchema.optional(),
+    /** Class the character starts with; any class can be chosen instead (respec). */
+    defaultClass: idSchema,
+  })
+  .strict();
+
 /** Spell slots for a multiclass caster, indexed by combined caster level (index 0 = level 1). */
 export const slotTableSchema = perClassLevel(slotRowSchema);
 
@@ -364,6 +381,7 @@ export const gameDataSchema = z
     races: z.array(raceSchema),
     backgrounds: z.array(backgroundSchema),
     feats: z.array(featSchema),
+    origins: z.array(originSchema),
     features: z.array(featureSchema),
     optionGroups: z.array(optionGroupSchema),
     spells: z.array(spellSchema),
@@ -388,4 +406,5 @@ export type Race = z.infer<typeof raceSchema>;
 export type Subrace = z.infer<typeof subraceSchema>;
 export type Background = z.infer<typeof backgroundSchema>;
 export type Feat = z.infer<typeof featSchema>;
+export type Origin = z.infer<typeof originSchema>;
 export type GameData = z.infer<typeof gameDataSchema>;

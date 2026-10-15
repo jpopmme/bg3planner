@@ -2,11 +2,13 @@
 import { gameData } from '@bg3planner/gamedata';
 import { computed } from 'vue';
 import { useBuildStore } from '../stores/build';
+import { usePartyStore } from '../stores/party';
 import AbilityScores from './AbilityScores.vue';
 import ChoicePicker from './ChoicePicker.vue';
 import IssueList from './IssueList.vue';
 
 const store = useBuildStore();
+const party = usePartyStore();
 const race = computed(() => gameData.races.find((r) => r.id === store.build.raceId));
 
 const isCreationKey = (key?: string) => !!key && /^(race|subrace):/.test(key);
@@ -27,6 +29,23 @@ const slotIssues = (key: string) =>
 
     <div class="fields">
       <label class="field">
+        <span>Origin</span>
+        <select
+          name="origin"
+          :value="store.origin.id"
+          @change="store.setOrigin(($event.target as HTMLSelectElement).value)"
+        >
+          <option
+            v-for="o in gameData.origins"
+            :key="o.id"
+            :value="o.id"
+            :disabled="o.id !== store.origin.id && party.takenOrigins.has(o.id)"
+          >
+            {{ o.name }}
+          </option>
+        </select>
+      </label>
+      <label class="field">
         <span>Name</span>
         <input v-model="store.name" type="text" placeholder="Tav" autocomplete="off" />
       </label>
@@ -34,6 +53,7 @@ const slotIssues = (key: string) =>
         <span>Race</span>
         <select
           name="race"
+          :disabled="store.locks.race"
           :value="store.build.raceId"
           @change="store.setRace(($event.target as HTMLSelectElement).value)"
         >
@@ -44,6 +64,7 @@ const slotIssues = (key: string) =>
         <span>Subrace</span>
         <select
           name="subrace"
+          :disabled="store.locks.race"
           :value="store.build.subraceId ?? ''"
           @change="store.setSubrace(($event.target as HTMLSelectElement).value || undefined)"
         >
@@ -55,6 +76,7 @@ const slotIssues = (key: string) =>
         <span>Background</span>
         <select
           name="background"
+          :disabled="store.locks.background"
           :value="store.build.backgroundId"
           @change="store.setBackground(($event.target as HTMLSelectElement).value)"
         >
@@ -64,6 +86,17 @@ const slotIssues = (key: string) =>
         </select>
       </label>
     </div>
+
+    <p v-if="store.locks.race || store.locks.background" class="muted lock-note">
+      {{ store.origin.name }} always has this
+      {{
+        store.locks.race && store.locks.background
+          ? 'race and background'
+          : store.locks.race
+            ? 'race'
+            : 'background'
+      }}. Class and everything else can change.
+    </p>
 
     <ChoicePicker
       v-for="slot in slots"
@@ -96,6 +129,11 @@ const slotIssues = (key: string) =>
 .field span {
   font-size: 0.875rem;
   color: var(--ink-muted);
+}
+
+.lock-note {
+  margin: -12px 0 0;
+  font-size: 0.875rem;
 }
 
 .field input {

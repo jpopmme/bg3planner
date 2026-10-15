@@ -44,6 +44,7 @@ export function findIntegrityIssues(data: GameData): string[] {
     ['subrace', subraces],
     ['background', data.backgrounds],
     ['feat', data.feats],
+    ['origin', data.origins],
     ['feature', data.features],
     ['option group', data.optionGroups],
     ['spell', data.spells],
@@ -291,6 +292,22 @@ export function findIntegrityIssues(data: GameData): string[] {
     for (const sub of race.subraces) checkGrant(`${race.name} / ${sub.name}`, sub);
   }
   for (const feat of data.feats) checkGrant(`Feat ${feat.name}`, feat);
+
+  const backgroundIds = new Set(data.backgrounds.map((b) => b.id));
+  for (const origin of data.origins) {
+    const race = data.races.find((r) => r.id === origin.raceId);
+    if (origin.raceId && !race) issues.push(`${origin.name}: unknown race "${origin.raceId}"`);
+    if (origin.subraceId && !race?.subraces.some((s) => s.id === origin.subraceId)) {
+      issues.push(`${origin.name}: "${origin.subraceId}" is not a subrace of ${origin.raceId}`);
+    }
+    if (race && race.subraces.length > 0 && !origin.subraceId) {
+      issues.push(`${origin.name}: fixes the race ${race.name} but not its subrace`);
+    }
+    if (origin.backgroundId && !backgroundIds.has(origin.backgroundId)) {
+      issues.push(`${origin.name}: unknown background "${origin.backgroundId}"`);
+    }
+  }
+  if (!data.origins.some((o) => o.kind === 'custom')) issues.push('no custom origin');
 
   for (const id of featureIds) {
     if (!usedFeatures.has(id)) issues.push(`feature "${id}" is never granted`);

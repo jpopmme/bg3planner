@@ -32,6 +32,8 @@ export const buildSchema = z
   .object({
     /** Dataset the build was made with (see GAME_DATA_VERSION). */
     gameDataVersion: z.string(),
+    /** Who the character is (see the dataset's origins); absent means a custom character. */
+    originId: idSchema.optional(),
     raceId: idSchema,
     subraceId: idSchema.optional(),
     backgroundId: idSchema,
