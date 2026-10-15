@@ -151,7 +151,7 @@ export const eldritchKnight = {
       choices: [
         { type: 'cantrip', count: 2, from: wizardList },
         { type: 'spell', count: 2, from: wizardList, maxLevel: 1, schools: abjurationOrEvocation },
-        { type: 'spell', count: 1, from: wizardList, maxLevel: 1, label: 'Any school' },
+        { type: 'spell', count: 1, from: wizardList, maxLevel: 1, label: 'Spell from any school' },
       ],
     },
     {
@@ -176,7 +176,7 @@ export const eldritchKnight = {
       level: 8,
       features: [],
       choices: [
-        { type: 'spell', count: 1, from: wizardList, maxLevel: 2, label: 'Any school' },
+        { type: 'spell', count: 1, from: wizardList, maxLevel: 2, label: 'Spell from any school' },
         replace(2),
       ],
     },

@@ -82,7 +82,7 @@ const spellFilter = {
   minLevel: spellLevelSchema.optional(),
   maxLevel: spellLevelSchema,
   schools: z.array(spellSchoolSchema).min(1).optional(),
-  /** Short UI hint, e.g. "Any school" or "Mystic Arcanum". */
+  /** Names the choice in the UI, e.g. "Spell from any school" or "Mystic Arcanum". */
   label: z.string().optional(),
 };
 

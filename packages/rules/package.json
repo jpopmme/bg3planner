@@ -5,7 +5,8 @@
   "type": "module",
   "description": "Rules engine: derives a character sheet from a build and lists and validates its choices",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./fixtures": "./src/fixtures/builds.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json"

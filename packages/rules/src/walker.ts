@@ -358,7 +358,12 @@ export function walkBuild(build: Build, data: GameData): WalkResult {
       case 'cantrip':
         return choice.label ?? 'Cantrips';
       case 'spell':
-        return choice.label ?? 'Spells';
+        if (choice.label) return choice.label;
+        if (choice.schools) {
+          const schools = choice.schools.join(' or ');
+          return `${schools.charAt(0).toUpperCase()}${schools.slice(1)} spells`;
+        }
+        return 'Spells';
       case 'replace-spell':
         return 'Spell replacement';
       case 'ability-increase':
