@@ -24,3 +24,33 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: e2e/playwright-report
+          retention-days: 7
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: docker build -t bg3planner .
+      - name: Smoke test
+        run: |
+          docker run -d --name planner -p 3000:3000 bg3planner
+          for i in $(seq 1 20); do curl -fs http://127.0.0.1:3000/api/health && break; sleep 1; done
+          curl -fs -H 'Accept: text/html' http://127.0.0.1:3000/ | grep -q '<div id="app">'
+          docker rm -f planner

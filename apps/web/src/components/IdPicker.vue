@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import type { ChoiceSlot } from '@bg3planner/rules';
 import { computed, ref, useId } from 'vue';
+import { choiceTarget } from '../lib/details';
 import { optionName, pickCount } from '../lib/names';
+import DetailsButton from './DetailsButton.vue';
 import { useBuildStore } from '../stores/build';
 
 const props = defineProps<{ choiceSlot: ChoiceSlot }>();
@@ -89,6 +91,12 @@ const full = computed(() => selected.value.length >= count.value);
             </span>
           </span>
         </label>
+        <DetailsButton
+          v-if="choiceTarget(choiceSlot.choice, optionId)"
+          icon
+          :target="choiceTarget(choiceSlot.choice, optionId)!"
+          :label="optionName(choiceSlot.choice, optionId).name"
+        />
       </li>
       <li v-if="visible.length === 0 && invalid.length === 0" class="empty">
         {{ offered.length ? 'Nothing matches the filter.' : 'Nothing left to choose here.' }}
@@ -152,7 +160,19 @@ legend {
   overflow-y: auto;
 }
 
+.options li {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.options li > :deep(.details-icon) {
+  opacity: 0.75;
+}
+
 label {
+  flex: 1;
+  min-width: 0;
   display: flex;
   gap: 8px;
   align-items: baseline;

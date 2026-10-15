@@ -4,6 +4,8 @@ import { type Act, type EquipSlot, SLOT_NAMES, itemsForSlot } from '@bg3planner/
 import { computed, nextTick, ref, useId } from 'vue';
 import { byRarity, itemBasics, itemById, itemEffects, rarityName } from '../lib/items';
 import { useBuildStore } from '../stores/build';
+import DetailsButton from './DetailsButton.vue';
+import SlotIcon from './SlotIcon.vue';
 
 const props = defineProps<{
   act: Act;
@@ -50,11 +52,16 @@ function choose(next: string | undefined) {
 
 <template>
   <li class="slot" :data-slot="equipSlot" :class="{ empty: !item }">
-    <span :id="`${id}-label`" class="slot-name">{{ SLOT_NAMES[equipSlot] }}</span>
+    <span class="slot-name">
+      <SlotIcon :name="equipSlot" />
+      <span :id="`${id}-label`">{{ SLOT_NAMES[equipSlot] }}</span>
+    </span>
 
     <div class="current">
       <template v-if="item">
-        <span class="item-name" :data-rarity="item.rarity">{{ item.name }}</span>
+        <span class="item-name" :data-rarity="item.rarity">
+          <DetailsButton :target="{ kind: 'item', id: item.id }">{{ item.name }}</DetailsButton>
+        </span>
         <span class="basics muted">
           {{ rarityName(item) }} · {{ itemBasics(item)
           }}<template v-if="item.unique"> · one of a kind</template>
@@ -153,9 +160,19 @@ function choose(next: string | undefined) {
 
 .slot-name {
   grid-area: name;
+  display: flex;
+  gap: 8px;
+  align-items: center;
   font-weight: 700;
   font-size: 0.9375rem;
-  padding-top: 2px;
+}
+
+.slot-name .slot-icon {
+  color: var(--ink-muted);
+}
+
+.empty .slot-name .slot-icon {
+  opacity: 0.6;
 }
 
 .current {

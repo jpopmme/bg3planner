@@ -267,6 +267,14 @@ Estimates assume one developer working part-time.
 | **M7** | Equipment planner (1–2 weeks) | Item catalog, slot filtering, per-act loadouts, duplicate-unique-item warnings across the party, importer fills equipment | Hexknight's Act 1–3 gear imports, and a duplicated unique item raises a warning |
 | **M8** | Polish (ongoing) | Tooltips/details panel, icons, dark theme, responsive layout, PWA/offline, Playwright E2E, Docker image | Lighthouse ≥ 90, and E2E covers create → import → save → share |
 
+*Learned in M8:* Lighthouse (production build, Lighthouse 12) scored Performance 97–100,
+Accessibility 100, Best Practices 100 and SEO 100 on the party and planner pages, mobile and
+desktop. Reaching Accessibility 100 needed darker light-theme warning and rarity colours (4.5:1 on
+every background) and a heading for the sheet. Fonts are self-hosted (`@fontsource`) so the app
+works offline and makes no third-party requests. Icons are our own SVG outlines; game art stays out
+of the repository. Item, spell, feature, feat and option descriptions come from bg3.wiki
+(Cargo tables plus the rendered Feats page) and load lazily, as their own 19 KB (gzip) file.
+
 The critical path is **M1 → M2 → M3**. M4 and M5 can overlap with M3. M6 needs M1's name/alias data.
 
 ---
@@ -279,6 +287,9 @@ The critical path is **M1 → M2 → M3**. M4 and M5 can overlap with M3. M6 nee
 - **Importer fixtures:** saved guide HTML → expected `ImportResult` snapshot.
 - **E2E (Playwright):** create a party → add a character → import a guide → edit → reload → still saved.
 - **CI:** lint, typecheck, unit tests on every push. E2E runs on the main branch.
+  - *Learned in M8:* the E2E suite takes about ten seconds against a production build, so CI runs
+    it, and a Docker build with a smoke test, on every pull request too. It imports a synthetic
+    guide page (pasted HTML), so it never depends on Gamestegy being reachable.
 
 ---
 

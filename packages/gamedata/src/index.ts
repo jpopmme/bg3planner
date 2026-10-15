@@ -20,6 +20,15 @@ export { findIntegrityIssues, maxSpellLevel } from './integrity';
  */
 export const GAME_DATA_VERSION = 'patch-8';
 
+/**
+ * What each spell, feature, feat and option does, keyed as `spell:<id>`, `feature:<id>`,
+ * `feat:<id>` and `option:<group>:<id>`. Loaded on demand: it is only needed when a player opens
+ * the details of something, and bundlers split it into its own file.
+ */
+export async function loadDescriptions(): Promise<Record<string, string>> {
+  return (await import('./data/descriptions.json')).default;
+}
+
 /** The full dataset. Validated by the package's tests rather than at runtime. */
 export const gameData: GameData = {
   version: GAME_DATA_VERSION,

@@ -1,0 +1,16 @@
+.git
+.github
+.claude
+.agents
+**/node_modules
+**/dist
+coverage
+*.log
+*.db
+*.db-journal
+.env
+.env.*
+apps/server/data
+packages/importer/fixtures/private
+e2e/test-results
+e2e/playwright-report

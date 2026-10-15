@@ -8,3 +8,5 @@ package-lock.json
 skills-lock.json
 # docs keep hand-written tables compact
 *.md
+e2e/test-results
+e2e/playwright-report

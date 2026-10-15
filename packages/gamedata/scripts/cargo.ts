@@ -4,7 +4,7 @@
  * bg3.wiki rate-limits anonymous traffic, so the download retries with backoff. Behind an HTTP
  * proxy, run with NODE_USE_ENV_PROXY=1.
  */
-const USER_AGENT = 'bg3planner-datagen/0.1 (+https://github.com/jpopmme/bg3planner)';
+export const USER_AGENT = 'bg3planner-datagen/0.1 (+https://github.com/jpopmme/bg3planner)';
 const MAX_ATTEMPTS = 6;
 
 export interface CargoQuery {

@@ -3,7 +3,9 @@
 `src/data/spells.json` is generated from the [bg3.wiki](https://bg3.wiki) `spells` Cargo table by
 `scripts/generate-spells.ts`, and `src/data/items.json` from the `equipment`, `weapons` and
 `item_locations` tables by `scripts/generate-items.ts` (item effects are the wiki's text, cleaned of
-markup). Everything else in `src/data/` (classes, races, backgrounds, feats,
+markup), and `src/data/descriptions.json` from the `spells`, `passives` and `actions` tables and
+the rendered [Feats](https://bg3.wiki/wiki/Feats) page by `scripts/generate-descriptions.ts`.
+Everything else in `src/data/` (classes, races, backgrounds, feats,
 features, option lists, weapon types) was written by hand from the bg3.wiki pages and tables named
 at the top of each file.
 

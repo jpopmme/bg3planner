@@ -5,6 +5,7 @@ import { classColour } from '../lib/class-colours';
 import { useBuildStore } from '../stores/build';
 import ChoicePicker from './ChoicePicker.vue';
 import IssueList from './IssueList.vue';
+import NameList from './NameList.vue';
 import SourceNotes from './SourceNotes.vue';
 
 const props = defineProps<{ level: number }>();
@@ -46,7 +47,10 @@ const features = computed(() =>
   [
     ...(cls.value?.levels[classLevel.value - 1]?.features ?? []),
     ...(subclass.value?.levels.find((l) => l.level === classLevel.value)?.features ?? []),
-  ].map((id) => gameData.features.find((f) => f.id === id)?.name ?? id),
+  ].map((id) => ({
+    target: { kind: 'feature' as const, id },
+    name: gameData.features.find((f) => f.id === id)?.name ?? id,
+  })),
 );
 </script>
 
@@ -80,7 +84,7 @@ const features = computed(() =>
 
         <p v-if="features.length" class="features">
           <span class="muted">Gains</span>
-          {{ features.join(', ') }}
+          <NameList :entries="features" />
         </p>
 
         <SourceNotes v-if="store.build.source" :source="store.build.source" :level="level" />

@@ -5,7 +5,9 @@ guides. See [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md) for the roadmap.
 
 ## Requirements
 
-Node.js 22.12 or newer (`.nvmrc` pins the major version) and npm 10+.
+Node.js 22.12 or newer (`.nvmrc` pins the major version) and npm 10+. `package-lock.json` is
+written by npm 11: npm 10 installs from it fine, but use `npx npm@11 install …` when adding
+packages, or npm 10 rewrites many unrelated lines.
 
 ## Getting started
 
@@ -45,11 +47,45 @@ fly, and the server's production build (`tsup`) bundles them.
 | `npm run lint`         | ESLint                                                      |
 | `npm run format`       | Prettier (`format:check` to verify only)                    |
 | `npm run check`        | lint + format check + typecheck + tests, as CI runs them    |
+| `npm run test:e2e`     | Playwright end-to-end tests against a production build      |
 
-Run the built server with `npm start -w @bg3planner/server`. It reads `PORT`, `HOST`,
-`LOG_LEVEL` and `DATABASE_PATH` (default `data/bg3planner.db`, created if missing; `:memory:` for
-a throwaway database) from the environment. The web dev server reads `API_URL` to change its proxy
-target.
+Run the built server with `npm start -w @bg3planner/server`. It serves the API and the built web
+app (`apps/web/dist`, or `WEB_ROOT`), and reads `PORT`, `HOST`, `LOG_LEVEL` and `DATABASE_PATH`
+(default `data/bg3planner.db`, created if missing; `:memory:` for a throwaway database) from the
+environment. The server build is one self-contained bundle: it needs no `node_modules`. The web dev
+server reads `API_URL` to change its proxy target.
+
+`npm run test:e2e` builds both apps, starts the server on port 4321 with an in-memory database and
+runs `e2e/tests` (create a party → import a guide → reload → share; offline use; phone layout).
+Install the browser once with `npx playwright install chromium`, or point
+`PLAYWRIGHT_CHROMIUM_PATH` at a Chromium you already have.
+
+## Docker
+
+```sh
+docker build -t bg3planner .
+docker run -p 3000:3000 -v bg3planner-data:/data bg3planner
+```
+
+The image runs the server as an unprivileged user, serves the web app on port 3000 and keeps
+parties in SQLite under `/data` (mount a volume to keep them). It has a health check on
+`/api/health`. CI builds the image and smoke-tests it.
+
+## Offline and installing
+
+After the first visit the planner works offline: a service worker (generated at build time by
+`apps/web/build/service-worker.ts`) keeps the app's files, and parties live in the browser anyway.
+Saving or sharing online and importing from a link need the server. Browsers offer to install the
+planner as an app (it has a web manifest and icons). Hashed files are cached for a year and sent
+precompressed (Brotli or gzip); the page itself is always revalidated, so new releases show up on
+the next load.
+
+## Using the planner
+
+Names in the sheet, the level rows and the equipment tab are underlined with dots: click one (or
+the **i** beside a picker option) for what it does, from bg3.wiki, with a link to its wiki page.
+The card closes with Escape or a click elsewhere; on phones it rises from the bottom. The footer
+picks a light or dark theme, or follows the system's.
 
 ## Parties
 
@@ -73,7 +109,9 @@ Most magic items exist once in the game. When two characters in the active party
 one in the same act, both the slot and the party page warn about it.
 
 The catalogue (935 items) is generated from bg3.wiki by
-`npm run generate:items -w @bg3planner/gamedata`; see `packages/gamedata/ATTRIBUTION.md`.
+`npm run generate:items -w @bg3planner/gamedata`, and the descriptions of spells, features, feats
+and options by `npm run generate:descriptions -w @bg3planner/gamedata`; see
+`packages/gamedata/ATTRIBUTION.md`. Descriptions load only when a details card first opens.
 
 ## Importing build guides
 

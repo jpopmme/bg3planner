@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { type CargoSpellRow, decodeEntities, toSpells } from './spells';
+import { type CargoSpellRow, toSpells } from './spells';
+import { decodeEntities } from './wikitext';
 
 const row = (overrides: Partial<CargoSpellRow>): CargoSpellRow => ({
   page: 'Shield (spell)',

@@ -1,5 +1,6 @@
 import { slugify } from '@bg3planner/shared';
 import { type Spell, spellSchoolSchema } from '../src/schema';
+import { decodeEntities } from './wikitext';
 
 /** Fields requested from bg3.wiki's `spells` Cargo table. Keys are what Special:CargoExport returns. */
 export const CARGO_FIELDS = [
@@ -41,28 +42,6 @@ const CLASS_IDS: Record<string, string> = {
   Warlock: 'warlock',
   Wizard: 'wizard',
 };
-
-const ENTITIES: Record<string, string> = {
-  amp: '&',
-  quot: '"',
-  apos: "'",
-  lt: '<',
-  gt: '>',
-  nbsp: '\u00a0',
-  nobreak: '',
-  plus: '+',
-};
-
-export function decodeEntities(text: string): string {
-  return text.replace(/&(#\d+|#x[0-9a-f]+|[a-z]+);/gi, (match, code: string) => {
-    if (code[0] === '#') {
-      const n =
-        code[1] === 'x' || code[1] === 'X' ? parseInt(code.slice(2), 16) : Number(code.slice(1));
-      return String.fromCodePoint(n);
-    }
-    return ENTITIES[code.toLowerCase()] ?? match;
-  });
-}
 
 /**
  * Player spells that belong to at least one class list, sorted by level then name.

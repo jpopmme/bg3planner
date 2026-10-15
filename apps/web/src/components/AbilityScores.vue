@@ -79,16 +79,17 @@ const signed = (n: number) => (n >= 0 ? `+${n}` : `${n}`);
             </label>
           </td>
           <td class="score">
-            <strong>{{ store.character.abilityScores[ability] }}</strong>
+            <strong>{{ store.bareCharacter.abilityScores[ability] }}</strong>
             <span class="muted">{{
-              signed(abilityModifier(store.character.abilityScores[ability]))
+              signed(abilityModifier(store.bareCharacter.abilityScores[ability]))
             }}</span>
           </td>
         </tr>
       </tbody>
     </table>
     <p class="muted note">
-      Every race adds +2 to one ability and +1 to another. Scores shown include feats taken later.
+      Every race adds +2 to one ability and +1 to another. Scores shown include feats taken later,
+      but not gear.
     </p>
   </section>
 </template>

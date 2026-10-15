@@ -6,16 +6,16 @@
   --rule: #cdd2da;
   --accent: #5b4bc4;
   --accent-soft: #e4e1f7;
-  --warning: #b7791f;
+  --warning: #895a17;
   --error: #b42318;
   --class-fighter: #a4513a;
   --class-warlock: #6b3fa0;
-  /* Item rarities, in the game's colours, darkened to read on the light ground. */
-  --rarity-uncommon: #2c7a39;
+  /* Item rarities in the game's colours, darkened to 4.5:1 or more on every light background. */
+  --rarity-uncommon: #297235;
   --rarity-rare: #2160ad;
   --rarity-very-rare: #7a3db5;
-  --rarity-legendary: #9a6400;
-  --rarity-story: #b04a14;
+  --rarity-legendary: #8a5900;
+  --rarity-story: #a74613;
 
   --font-ui: 'Atkinson Hyperlegible', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-name: 'Grenze Gotisch', 'UnifrakturMaguntia', Georgia, serif;
@@ -32,8 +32,9 @@
   color-scheme: light dark;
 }
 
+/* Dark tokens: follow the system unless the player chose a theme (html[data-theme]). */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     --ground: #171a21;
     --surface: #1f232c;
     --ink: #e7e9ee;
@@ -51,6 +52,30 @@
     --rarity-legendary: #e2b24c;
     --rarity-story: #ee8c52;
   }
+}
+
+:root[data-theme='dark'] {
+  --ground: #171a21;
+  --surface: #1f232c;
+  --ink: #e7e9ee;
+  --ink-muted: #9ba3b4;
+  --rule: #343a47;
+  --accent: #9d90f0;
+  --accent-soft: #2c2850;
+  --warning: #e0a84a;
+  --error: #f0786b;
+  --class-fighter: #d0785e;
+  --class-warlock: #a77ad6;
+  --rarity-uncommon: #6cc27a;
+  --rarity-rare: #6ea8f0;
+  --rarity-very-rare: #b78ceb;
+  --rarity-legendary: #e2b24c;
+  --rarity-story: #ee8c52;
+  color-scheme: dark;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
 }
 
 *,

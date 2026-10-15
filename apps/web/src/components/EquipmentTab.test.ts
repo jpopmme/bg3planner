@@ -48,6 +48,14 @@ describe('build store equipment', () => {
     store.act = 'act3';
     expect(store.character.armourClass).toBe(19); // 18 + Defence
   });
+
+  it('keeps gear out of the scores used for point buy and feats', () => {
+    const store = setup();
+    store.setItem('act3', 'amulet', 'amulet-of-greater-health');
+    store.act = 'act3';
+    expect(store.character.abilityScores.constitution).toBe(23);
+    expect(store.bareCharacter.abilityScores.constitution).toBe(14);
+  });
 });
 
 describe('EquipmentTab', () => {

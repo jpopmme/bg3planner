@@ -41,7 +41,10 @@ export const useBuildStore = defineStore('build', () => {
     { immediate: true },
   );
 
+  /** The sheet: the character wearing the chosen act's gear. */
   const character = computed(() => deriveCharacter(build.value, gameData, { act: act.value }));
+  /** The character without gear, for choices about the character itself (point buy, feats). */
+  const bareCharacter = computed(() => deriveCharacter(build.value, gameData));
   const choices = computed(() => availableChoices(build.value, gameData));
   const issues = computed(() => validateBuild(build.value, gameData));
   const gearIssues = computed(() => equipmentIssues(build.value, gameData, character.value));
@@ -192,6 +195,7 @@ export const useBuildStore = defineStore('build', () => {
     locks,
     setOrigin,
     character,
+    bareCharacter,
     choices,
     issues,
     setRace,

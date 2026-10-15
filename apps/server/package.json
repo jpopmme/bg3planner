@@ -16,6 +16,7 @@
     "@bg3planner/rules": "^0.0.0",
     "@bg3planner/shared": "^0.0.0",
     "@fastify/rate-limit": "^11.2.1",
+    "@fastify/static": "^10.1.6",
     "cheerio": "^1.2.0",
     "devalue": "^6.0.3",
     "fastify": "^5.12.7"

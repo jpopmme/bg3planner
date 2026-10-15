@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { findIntegrityIssues, gameData, gameDataSchema, type GameData } from './index';
+import {
+  findIntegrityIssues,
+  gameData,
+  gameDataSchema,
+  type GameData,
+  loadDescriptions,
+} from './index';
 
 /** A deep copy that a test can break without touching the shared dataset. */
 const copy = (): GameData => structuredClone(gameData);
@@ -17,6 +23,20 @@ describe('gameData', () => {
     const lists = new Set(gameData.spells.flatMap((s) => s.classes));
     expect(lists).toContain('wizard');
     expect(lists).toContain('warlock');
+  });
+});
+
+describe('loadDescriptions', () => {
+  it('describes every spell, feature, feat and option', async () => {
+    const descriptions = await loadDescriptions();
+    const keys = [
+      ...gameData.spells.map((s) => `spell:${s.id}`),
+      ...gameData.features.map((f) => `feature:${f.id}`),
+      ...gameData.feats.map((f) => `feat:${f.id}`),
+      ...gameData.optionGroups.flatMap((g) => g.options.map((o) => `option:${g.id}:${o.id}`)),
+    ];
+    expect(keys.filter((k) => !descriptions[k])).toEqual([]);
+    expect(Object.keys(descriptions).filter((k) => !keys.includes(k))).toEqual([]);
   });
 });
 

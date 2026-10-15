@@ -5,8 +5,8 @@ import {
   specialEffects,
   statEffects,
   toItems,
-  wikiToText,
 } from './items';
+import { wikiToText } from './wikitext';
 
 const icon = (name: string) =>
   `&lt;span class=&quot;bg3wiki-icontext-icon nowrap&quot; &gt;&lt;span class=&quot;bg3wiki-hidden-code&quot;&gt;&lt;/span&gt;[[File:${name} Icon.png|x25px|link=${name}|alt=[[${name}]]|class=bg3wiki-icon]]&lt;/span&gt;&amp;#8239;`;

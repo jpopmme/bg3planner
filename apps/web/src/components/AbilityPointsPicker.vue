@@ -38,7 +38,7 @@ function canRaise(ability: Ability) {
   return (
     spent.value < total.value &&
     (points.value[ability] ?? 0) < (choice.value?.maxPerAbility ?? 0) &&
-    store.character.abilityScores[ability] < 20
+    store.bareCharacter.abilityScores[ability] < 20
   );
 }
 </script>
@@ -52,7 +52,7 @@ function canRaise(ability: Ability) {
     <ul>
       <li v-for="ability in abilities" :key="ability">
         <span class="name">{{ titleCase(ability) }}</span>
-        <span class="score muted">{{ store.character.abilityScores[ability] }}</span>
+        <span class="score muted">{{ store.bareCharacter.abilityScores[ability] }}</span>
         <button
           type="button"
           :aria-label="`Remove a point from ${ability}`"

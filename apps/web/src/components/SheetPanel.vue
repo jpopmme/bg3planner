@@ -5,6 +5,7 @@ import { ABILITIES } from '@bg3planner/shared';
 import { computed } from 'vue';
 import { titleCase } from '../lib/names';
 import { useBuildStore } from '../stores/build';
+import NameList from './NameList.vue';
 
 const store = useBuildStore();
 const c = computed(() => store.character);
@@ -46,7 +47,10 @@ const optionNames = computed(() =>
       const group = gameData.optionGroups.find((g) => g.id === groupId);
       return {
         title: group?.name ?? titleCase(groupId),
-        names: ids.map((id) => group?.options.find((o) => o.id === id)?.name ?? titleCase(id)),
+        entries: ids.map((id) => ({
+          target: { kind: 'option' as const, group: groupId, id },
+          name: group?.options.find((o) => o.id === id)?.name ?? titleCase(id),
+        })),
       };
     }),
 );
@@ -56,7 +60,8 @@ const todo = computed(() => store.issues.filter((i) => i.severity === 'warning')
 </script>
 
 <template>
-  <section class="sheet" aria-label="Character sheet">
+  <section class="sheet" aria-labelledby="sheet-heading">
+    <h2 id="sheet-heading" class="visually-hidden">Character sheet</h2>
     <p class="state" :class="{ error: errors, warning: !errors && todo }">
       <template v-if="errors"
         >{{ errors }} {{ errors === 1 ? 'problem' : 'problems' }} to fix</template
@@ -136,22 +141,38 @@ const todo = computed(() => store.issues.filter((i) => i.severity === 'warning')
 
     <section v-if="c.features.length">
       <h3>Features</h3>
-      <p>{{ c.features.map((f) => f.name).join(', ') }}</p>
+      <p>
+        <NameList
+          :entries="
+            c.features.map((f) => ({ target: { kind: 'feature', id: f.id }, name: f.name }))
+          "
+        />
+      </p>
     </section>
 
     <section v-for="group in optionNames" :key="group.title">
       <h3>{{ group.title }}</h3>
-      <p>{{ group.names.join(', ') }}</p>
+      <p><NameList :entries="group.entries" /></p>
     </section>
 
     <section v-if="c.feats.length">
       <h3>Feats</h3>
-      <p>{{ c.feats.map((f) => f.name).join(', ') }}</p>
+      <p>
+        <NameList
+          :entries="c.feats.map((f) => ({ target: { kind: 'feat', id: f.id }, name: f.name }))"
+        />
+      </p>
     </section>
 
     <section v-for="group in spellGroups" :key="group.title">
       <h3>{{ group.title }}</h3>
-      <p>{{ group.spells.map((s) => s.name).join(', ') }}</p>
+      <p>
+        <NameList
+          :entries="
+            group.spells.map((s) => ({ target: { kind: 'spell', id: s.id }, name: s.name }))
+          "
+        />
+      </p>
     </section>
 
     <section v-if="Object.keys(c.resources).length">
