@@ -1,0 +1,10 @@
+node_modules
+dist
+coverage
+package-lock.json
+# third-party skills installed by skillmds
+.agents
+.claude/skills
+skills-lock.json
+# docs keep hand-written tables compact
+*.md

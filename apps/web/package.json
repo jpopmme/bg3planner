@@ -1,0 +1,26 @@
+{
+  "name": "@bg3planner/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Vue front end for the party build planner",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "vue-tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@bg3planner/shared": "^0.0.0",
+    "pinia": "^4.1.0",
+    "vue": "^3.5.44",
+    "vue-router": "^5.4.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.10",
+    "@vue/test-utils": "^2.5.1",
+    "happy-dom": "^21.0.1",
+    "vite": "^8.3.4",
+    "vue-tsc": "^3.3.13"
+  }
+}

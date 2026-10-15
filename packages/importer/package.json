@@ -1,0 +1,13 @@
+{
+  "name": "@bg3planner/importer",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Turns build guides (e.g. Gamestegy) into draft builds",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "@bg3planner/gamedata",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Versioned Baldur's Gate 3 dataset and the scripts that generate it",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  }
+}

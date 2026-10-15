@@ -1,0 +1,14 @@
+node_modules/
+dist/
+coverage/
+*.log
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+.DS_Store
+# local SQLite databases
+*.db
+*.db-journal
+# saved guide pages used as private importer fixtures
+packages/importer/fixtures/private/

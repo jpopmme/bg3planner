@@ -1,0 +1,13 @@
+{
+  "name": "@bg3planner/shared",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Types, schemas and the rules engine shared by web and server",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  }
+}

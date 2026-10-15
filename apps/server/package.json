@@ -1,0 +1,22 @@
+{
+  "name": "@bg3planner/server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "HTTP API: party storage and guide import",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsup",
+    "start": "node dist/index.js",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@bg3planner/gamedata": "^0.0.0",
+    "@bg3planner/shared": "^0.0.0",
+    "fastify": "^5.12.7"
+  },
+  "devDependencies": {
+    "tsup": "^9.0.0",
+    "tsx": "^4.23.15"
+  }
+}
