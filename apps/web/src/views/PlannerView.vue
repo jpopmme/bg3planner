@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import { RouterLink } from 'vue-router';
 import ClassSplitBar from '../components/ClassSplitBar.vue';
 import CreationTab from '../components/CreationTab.vue';
+import EquipmentTab from '../components/EquipmentTab.vue';
 import LevelsTab from '../components/LevelsTab.vue';
 import SaveBar from '../components/SaveBar.vue';
 import SheetPanel from '../components/SheetPanel.vue';
@@ -13,11 +14,12 @@ import { usePartyStore } from '../stores/party';
 const store = useBuildStore();
 const party = usePartyStore();
 const { partyPath } = usePartyPaths();
-const tab = ref<'creation' | 'levels'>('creation');
+const tab = ref<'creation' | 'levels' | 'equipment'>('creation');
 
 const tabs = [
   { id: 'creation', label: 'Creation' },
   { id: 'levels', label: 'Levels' },
+  { id: 'equipment', label: 'Equipment' },
 ] as const;
 
 const race = computed(() => {
@@ -73,7 +75,8 @@ const race = computed(() => {
           class="panel"
         >
           <CreationTab v-if="t.id === 'creation'" />
-          <LevelsTab v-else />
+          <LevelsTab v-else-if="t.id === 'levels'" />
+          <EquipmentTab v-else />
         </section>
       </fieldset>
     </main>

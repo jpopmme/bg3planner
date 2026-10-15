@@ -1,5 +1,6 @@
 import type { Choice, GameData } from '@bg3planner/gamedata';
 import {
+  type Act,
   type Answer,
   type Build,
   type BuildSource,
@@ -10,6 +11,7 @@ import {
   validateBuild,
 } from '@bg3planner/rules';
 import { ABILITIES, type Ability, SKILLS, type Skill } from '@bg3planner/shared';
+import { importEquipment } from './equipment';
 import { type Named, matchName } from './match';
 import { extractPost } from './nuxt';
 import { type AbilityValue, type OverviewLevel, parseAbilityValue, readSections } from './sections';
@@ -174,6 +176,7 @@ export function importGamestegyGuide(
   const notes: ImportNote[] = [];
   const note = (message: string, level?: number) =>
     notes.push({ ...(level ? { level } : {}), message });
+  const gearNote = (message: string, act: Act) => notes.push({ act, message });
 
   // ---- Race and background: the guide's first suggestion that the planner knows
   const raceOptions: (Named & { raceId: string; subraceId?: string })[] = data.races.flatMap(
@@ -265,12 +268,16 @@ export function importGamestegyGuide(
   }
   if (build.levels.length === 0) build.levels.push({ classId: data.classes[0]!.id, answers: {} });
 
+  // ---- Gear, once the levels say what the character is proficient with
+  if (sections.equipment.length) importEquipment(build, sections.equipment, data, gearNote);
+  else note('The guide has no gear recommendations by act, so no equipment was imported.');
+
   build.source = {
     kind: 'gamestegy',
     ...(options.url ? { url: options.url } : {}),
     title: post.title,
     importedAt: (options.now ?? new Date()).toISOString(),
-    notes: notes.slice(0, 100).map((n) => ({ ...n, message: n.message.slice(0, 500) })),
+    notes: notes.slice(0, 200).map((n) => ({ ...n, message: n.message.slice(0, 500) })),
   };
 
   return {

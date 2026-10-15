@@ -114,6 +114,13 @@ The planner is only as good as its dataset. Plan:
    - *Learned in M1:* bg3.wiki's API `cargoquery` is closed to anonymous users, but
      `Special:CargoExport` returns JSON. Anonymous traffic is rate-limited (HTTP 429), so the
      generator retries with backoff and can rebuild from a saved export (`--input`).
+   - *Learned in M7:* items come from the `equipment`, `weapons` and `item_locations` tables. An item
+     is treated as unique unless it is common, a generic "+1" item, summoned (Shadow Blade), or
+     found in five or more places; location counts alone are too noisy. Effects in fixed phrasings
+     ("Armour Class +1", "Charisma +2 (up to 22)", "Sets the wearer's Constitution score to 23",
+     saving throw and skill bonuses) are parsed so the sheet can apply them; everything else stays
+     text. M7 also found that Hexblade's Hex Warrior granted no proficiencies; levels can now grant
+     armour, shield and weapon proficiencies.
    - *Learned in M1:* BG3 differs from tabletop 5e on spell slots. A single class's caster level
      rounds **up** (Eldritch Knight 4 → caster level 2), while multiclass fractions are summed and
      then rounded **down**. The rules engine (M2) must follow this.
@@ -227,6 +234,14 @@ HTML (pasted / uploaded) ──────────────────�
   (`availableChoices`), so an import can never produce an illegal build. Names are matched
   exactly after normalising, then within a choice's own options allowing two typos (no fuse.js).
   An honest `bg3planner` user agent is accepted; the earlier 403 came from one fetching tool.
+- *Learned in M7:* gear tables are "Slot | Item | Description" with rowspans on both the slot and
+  the description, so they are read as a resolved grid. Rows under one slot are alternatives, and
+  an act can have several setups (h4); the importer takes the first setup and the first item per
+  slot that `equipmentIssues` accepts, prefers a one-handed main weapon when off-hand items are
+  listed, and carries earlier acts' items into slots an act leaves empty. Slot labels are
+  sometimes wrong (a dagger under "Shield"), so items go where their kind fits. Item names a guide
+  writes bare ("Dark Justiciar Half-Plate") mean the rarest variant. The import cache key includes
+  an `IMPORTER_VERSION`, so results from an older importer are not reused.
 - **Robustness:** every section parser is optional. A missing section produces a warning and does
   not fail the import. Unmatched entities go into `unresolved` for manual fixing.
 - **Tests:** a local snapshot of the Hexknight page plus 4–5 other guides covering different

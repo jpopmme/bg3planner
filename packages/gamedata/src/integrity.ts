@@ -49,6 +49,7 @@ export function findIntegrityIssues(data: GameData): string[] {
     ['option group', data.optionGroups],
     ['spell', data.spells],
     ['weapon type', data.weaponTypes],
+    ['item', data.items],
     ...data.optionGroups.map((g): [string, { id: string }[]] => [`option in "${g.id}"`, g.options]),
   ];
   for (const [kind, items] of idLists) {
@@ -63,6 +64,11 @@ export function findIntegrityIssues(data: GameData): string[] {
   const featureIds = new Set(data.features.map((f) => f.id));
   const groupsById = new Map(data.optionGroups.map((g) => [g.id, g]));
   const weaponTypeIds = new Set(data.weaponTypes.map((w) => w.id));
+  for (const item of data.items) {
+    if (item.kind === 'weapon' && !weaponTypeIds.has(item.weaponType)) {
+      issues.push(`item "${item.id}" has unknown weapon type "${item.weaponType}"`);
+    }
+  }
   const spellLists = new Set(data.spells.flatMap((s) => s.classes));
   const classResources = new Set(
     [...data.classes, ...data.subclasses].flatMap((c) =>

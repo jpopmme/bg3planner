@@ -1,7 +1,7 @@
 import { gameData } from '@bg3planner/gamedata';
 import { describe, expect, it } from 'vitest';
 import { GuideFormatError, importGamestegyGuide, isGamestegyGuideUrl } from './index';
-import { entity, guidePage, overviewTable, simpleTable } from './test/guide-page';
+import { entity, gearTable, guidePage, overviewTable, simpleTable } from './test/guide-page';
 
 const races = simpleTable('Races', ['Wood Half-Elf', 'Half-Orc']);
 const backgrounds = simpleTable('Background', ['Charlatan', 'Noble']);
@@ -50,7 +50,29 @@ const warlockGuide = guidePage(
         ],
       },
       { level: 5, className: 'Rogue 1', lines: ['<strong>Expertise:</strong> Stealth'] },
-    ]),
+    ]) +
+    '<h2>Equipment Recommendations</h2>' +
+    '<h3>Act 1</h3>' +
+    gearTable([
+      { slot: 'Melee (Two-Handed)', items: ['Drakethroat Glaive'] },
+      { slot: 'Melee (One-Handed)', items: ['Shadow Blade'] },
+      { slot: 'Shield', items: ['Adamantine Shield', 'Sentinel Shield'] },
+      { slot: 'Armor', items: ['Dark Justiciar Half-Plate'] },
+      { slot: 'Gloves', items: ['[Any good gloves]'] },
+      {
+        slot: 'Rings',
+        items: ['Ring of Protection', '[Shadow-Cloaked Ring(BiS)]', 'Caustic Band'],
+      },
+    ]) +
+    '<h3>Act 2 - mid-game</h3>' +
+    '<h4>Setup A</h4>' +
+    gearTable([{ slot: 'Head', items: ['Helmet of Grit'] }]) +
+    '<h4>Setup B</h4>' +
+    gearTable([{ slot: 'Head', items: ['Birthright'] }]) +
+    '<h3>Act 3 - Final Build setup</h3>' +
+    '<p>Keep what you have.</p>' +
+    '<h2>Build Mechanics</h2>' +
+    gearTable([{ slot: 'Head', items: ['Haste Helm'] }]),
 );
 
 describe('importGamestegyGuide', () => {
@@ -60,7 +82,9 @@ describe('importGamestegyGuide', () => {
   });
   const answers = (level: number) => result.build.levels[level - 1]!.answers;
   const notesAt = (level?: number) =>
-    result.notes.filter((n) => n.level === level).map((n) => n.message);
+    result.notes.filter((n) => n.level === level && !n.act).map((n) => n.message);
+  const gearNotes = (act: string) =>
+    result.notes.filter((n) => n.act === act).map((n) => n.message);
 
   it('names the character after the guide', () => {
     expect(result.name).toBe('Test Guide');
@@ -147,6 +171,35 @@ describe('importGamestegyGuide', () => {
     expect(result.build.source!.notes).toEqual(result.notes);
     expect(result.issues.map((i) => i.message)).toEqual(['Warlock – Cantrips: choose 1']);
   });
+
+  it('fills each act with the first gear that fits, preferring a one-handed weapon', () => {
+    expect(result.build.equipment?.act1).toEqual({
+      meleeMain: 'shadow-blade',
+      meleeOff: 'adamantine-shield',
+      armour: 'dark-justiciar-half-plate-very-rare',
+      ring1: 'ring-of-protection',
+      ring2: 'shadow-cloaked-ring',
+    });
+    expect(gearNotes('act1')).toEqual([
+      'Not in the item catalogue, so not placed: "Any good gloves".',
+      'Melee main hand: the guide also suggests Drakethroat Glaive.',
+      'Melee off hand: the guide also suggests Sentinel Shield.',
+      'Rings: the guide also suggests Caustic Band.',
+    ]);
+  });
+
+  it('uses the first setup and keeps earlier gear in slots an act leaves empty', () => {
+    expect(result.build.equipment?.act2).toEqual({
+      ...result.build.equipment?.act1,
+      head: 'helmet-of-grit',
+    });
+    expect(gearNotes('act2')).toEqual([
+      'The guide also describes Setup B; Setup A was used.',
+      'Melee main hand, Melee off hand, Armour, Ring 1 and Ring 2: nothing new in the guide, so the earlier act’s gear is kept.',
+    ]);
+    expect(result.build.equipment?.act3).toEqual(result.build.equipment?.act2);
+    expect(gearNotes('act3')).toEqual(['The guide lists no gear table for Act 3.']);
+  });
 });
 
 describe('guides the importer cannot fully read', () => {
@@ -159,6 +212,7 @@ describe('guides the importer cannot fully read', () => {
       'The guide names no background; Acolyte was used.',
       'The guide gives no ability scores; all were left at 8.',
       'The guide has no levelling overview table, so no levels were imported.',
+      'The guide has no gear recommendations by act, so no equipment was imported.',
     ]);
   });
 

@@ -4,6 +4,7 @@ import type {
   Feat,
   Feature,
   GameData,
+  Item,
   Origin,
   OptionGroup,
   Race,
@@ -27,6 +28,7 @@ export interface DataIndex {
   optionGroups: Map<string, OptionGroup>;
   spells: Map<string, Spell>;
   weaponTypes: Map<string, WeaponType>;
+  items: Map<string, Item>;
 }
 
 const cache = new WeakMap<GameData, DataIndex>();
@@ -49,6 +51,7 @@ export function indexData(data: GameData): DataIndex {
       optionGroups: byId(data.optionGroups),
       spells: byId(data.spells),
       weaponTypes: byId(data.weaponTypes),
+      items: byId(data.items),
     };
     cache.set(data, index);
   }

@@ -179,7 +179,13 @@ export const theHexblade = {
     { classLevel: 9, spells: ['banishing-smite', 'cone-of-cold'] },
   ],
   levels: [
-    { level: 1, features: ['hex-warrior', 'bind-hexed-weapon', 'hexblades-curse'], choices: [] },
+    {
+      level: 1,
+      features: ['hex-warrior', 'bind-hexed-weapon', 'hexblades-curse'],
+      choices: [],
+      // Hex Warrior, even when Hexblade is a multiclass.
+      proficiencies: { armour: ['medium'], shields: true, weapons: ['martial'] },
+    },
     { level: 6, features: ['accursed-spectre'], choices: [] },
     { level: 10, features: ['armour-of-hexes'], choices: [] },
   ],

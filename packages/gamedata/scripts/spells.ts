@@ -42,7 +42,16 @@ const CLASS_IDS: Record<string, string> = {
   Wizard: 'wizard',
 };
 
-const ENTITIES: Record<string, string> = { amp: '&', quot: '"', apos: "'", lt: '<', gt: '>' };
+const ENTITIES: Record<string, string> = {
+  amp: '&',
+  quot: '"',
+  apos: "'",
+  lt: '<',
+  gt: '>',
+  nbsp: '\u00a0',
+  nobreak: '',
+  plus: '+',
+};
 
 export function decodeEntities(text: string): string {
   return text.replace(/&(#\d+|#x[0-9a-f]+|[a-z]+);/gi, (match, code: string) => {

@@ -8,7 +8,13 @@ import {
   proficiencyBonus,
 } from '@bg3planner/shared';
 import type { Feature, GameData, Spellcasting } from '@bg3planner/gamedata';
-import type { Build } from './build';
+import type { Act, Build } from './build';
+import {
+  type ArmourClassPart,
+  applyAbilityEffects,
+  armourClassParts,
+  equippedItems,
+} from './equipment';
 import { type SpellSlots, spellSlots } from './spell-slots';
 import { type SpellKind, type Source, walkBuild } from './walker';
 
@@ -59,10 +65,16 @@ export interface DerivedCharacter {
   speed: number;
   /** Metres; 0 without darkvision. */
   darkvision: number;
+  /** The act whose planned gear is worn; absent means no gear at all. */
+  act?: Act;
+  /** Ability scores, including gear. */
   abilityScores: Record<Ability, number>;
   abilityModifiers: Record<Ability, number>;
   proficiencyBonus: number;
   hitPoints: number;
+  armourClass: number;
+  /** What the Armour Class is made of, e.g. armour, Dexterity, shield, rings. */
+  armourClassParts: ArmourClassPart[];
   savingThrows: Ability[];
   /** Total saving throw bonus per ability (modifier, plus proficiency where proficient). */
   savingThrowBonuses: Record<Ability, number>;
@@ -84,21 +96,33 @@ export interface DerivedCharacter {
   resources: Record<string, number>;
 }
 
-/** The character sheet a build produces. Invalid answers are skipped; see `validateBuild`. */
-export function deriveCharacter(build: Build, data: GameData): DerivedCharacter {
+/**
+ * The character sheet a build produces, wearing the gear planned for `act` if one is given.
+ * Invalid answers and items are skipped; see `validateBuild` and `equipmentIssues`.
+ */
+export function deriveCharacter(
+  build: Build,
+  data: GameData,
+  { act }: { act?: Act } = {},
+): DerivedCharacter {
   const { index, state } = walkBuild(build, data);
   const level = build.levels.length;
   const prof = proficiencyBonus(level);
+  const gear = equippedItems(act ? build.equipment?.[act] : undefined, data);
+  const worn = Object.values(gear);
 
-  const abilityScores = Object.fromEntries(
-    ABILITIES.map((a) => [
-      a,
-      Math.min(
-        20,
-        build.abilities.base[a] + (build.abilities.racialBonus[a] ?? 0) + state.abilityBonus[a],
-      ),
-    ]),
-  ) as Record<Ability, number>;
+  const abilityScores = applyAbilityEffects(
+    Object.fromEntries(
+      ABILITIES.map((a) => [
+        a,
+        Math.min(
+          20,
+          build.abilities.base[a] + (build.abilities.racialBonus[a] ?? 0) + state.abilityBonus[a],
+        ),
+      ]),
+    ) as Record<Ability, number>,
+    gear,
+  );
   const abilityModifiers = Object.fromEntries(
     ABILITIES.map((a) => [a, abilityModifier(abilityScores[a])]),
   ) as Record<Ability, number>;
@@ -147,6 +171,13 @@ export function deriveCharacter(build: Build, data: GameData): DerivedCharacter 
 
   const named = <T extends { id: string; name: string }>(item: T | undefined) =>
     item ? { id: item.id, name: item.name } : undefined;
+  const gearBonus = (get: (item: (typeof worn)[number]) => number | undefined) =>
+    worn.reduce((sum, item) => sum + (get(item) ?? 0), 0);
+  const acParts = armourClassParts(gear, abilityModifiers.dexterity, {
+    feats: featIds,
+    fightingStyles: state.options.get('fighting-styles') ?? [],
+  });
+
   const optional = <K extends string, V>(key: K, value: V | undefined) =>
     (value === undefined ? {} : { [key]: value }) as Partial<Record<K, V>>;
 
@@ -158,6 +189,7 @@ export function deriveCharacter(build: Build, data: GameData): DerivedCharacter 
     ...optional('subrace', named(subrace)),
     ...optional('background', named(background)),
     ...optional('size', race?.size),
+    ...optional('act', act),
     speed:
       (subrace?.speed ?? race?.speed ?? 9) +
       effectIds.reduce((sum, id) => sum + (SPEED_BONUS[id] ?? 0), 0),
@@ -166,16 +198,26 @@ export function deriveCharacter(build: Build, data: GameData): DerivedCharacter 
     abilityModifiers,
     proficiencyBonus: prof,
     hitPoints,
+    armourClass: acParts.reduce((sum, part) => sum + part.value, 0),
+    armourClassParts: acParts,
     savingThrows: ABILITIES.filter((a) => state.savingThrows.has(a)),
     savingThrowBonuses: Object.fromEntries(
-      ABILITIES.map((a) => [a, abilityModifiers[a] + (state.savingThrows.has(a) ? prof : 0)]),
+      ABILITIES.map((a) => [
+        a,
+        abilityModifiers[a] +
+          (state.savingThrows.has(a) ? prof : 0) +
+          gearBonus(
+            (item) => (item.savingThrowBonus?.all ?? 0) + (item.savingThrowBonus?.[a] ?? 0),
+          ),
+      ]),
     ) as Record<Ability, number>,
     skillBonuses: Object.fromEntries(
       SKILLS.map((skill) => [
         skill,
         abilityModifiers[SKILL_ABILITIES[skill]] +
           (state.skills.has(skill) ? prof : 0) +
-          (state.expertise.has(skill) ? prof : 0),
+          (state.expertise.has(skill) ? prof : 0) +
+          gearBonus((item) => item.skillBonus?.[skill]),
       ]),
     ) as Record<Skill, number>,
     skills: [...state.skills].sort(),

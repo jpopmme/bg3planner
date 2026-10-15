@@ -30,8 +30,8 @@ const skillAbility = (skill: Skill) => titleCase(SKILL_ABILITIES[skill]).slice(0
   <section v-if="summary" class="overview" aria-labelledby="overview-heading">
     <h2 id="overview-heading">Who rolls best</h2>
     <p class="muted intro">
-      Bonuses of the active party. Whoever is ahead on a check is marked, so you know who should try
-      it.
+      Bonuses of the active party, before gear. Whoever is ahead on a check is marked, so you know
+      who should try it.
     </p>
 
     <p v-if="summary.withoutDarkvision.length" class="darkvision">

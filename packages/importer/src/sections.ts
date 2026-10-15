@@ -26,8 +26,30 @@ export interface AbilityValue {
   bonus?: number;
 }
 
+/** One slot of a gear table: its label and the items suggested for it, best first. */
+export interface GearRow {
+  /** As the guide writes it, e.g. "Melee (One-Handed)" or "Rings". */
+  slot: string;
+  /** Item names: tagged item links, or a cell's plain text when it has none. */
+  items: string[];
+}
+
+/** One gear table (or several under the same heading). */
+export interface GearSetup {
+  /** The h4 above it, e.g. "High Damage Setup"; absent directly under the act heading. */
+  title?: string;
+  rows: GearRow[];
+}
+
+export interface ActGear {
+  act: 1 | 2 | 3;
+  setups: GearSetup[];
+}
+
 export interface GuideSections {
   overview: OverviewLevel[];
+  /** The "Equipment Recommendations" section, per act. */
+  equipment: ActGear[];
   /** First column of the races table, in the guide's order of preference. */
   races: string[];
   backgrounds: string[];
@@ -150,12 +172,92 @@ function parseAbilityTable($: CheerioAPI): Record<string, AbilityValue> | undefi
   return Object.keys(result).length === 6 ? result : undefined;
 }
 
+/**
+ * A table as a grid of cells with row and column spans resolved, so `grid[row][col]` is the cell
+ * covering that position (the same element repeats across the rows it spans).
+ */
+function tableGrid($: CheerioAPI, table: Cheerio<Element>): Element[][] {
+  const grid: Element[][] = [];
+  table
+    .find('tr')
+    .toArray()
+    .forEach((tr, r) => {
+      const row = (grid[r] ??= []);
+      let c = 0;
+      for (const cell of $(tr).children('td, th').toArray()) {
+        while (row[c]) c++;
+        const rows = Number(cell.attribs.rowspan) || 1;
+        const cols = Number(cell.attribs.colspan) || 1;
+        for (let dr = 0; dr < rows; dr++) {
+          for (let dc = 0; dc < cols; dc++) (grid[r + dr] ??= [])[c + dc] = cell;
+        }
+        c += cols;
+      }
+    });
+  return grid;
+}
+
+/** Rows of a "Slot | Item | Description" table, with the items of each slot in order. */
+function parseGearTable($: CheerioAPI, table: Cheerio<Element>): GearRow[] {
+  const rows: GearRow[] = [];
+  const seenCells = new Set<Element>();
+  for (const [slotCell, itemCell] of tableGrid($, table)) {
+    if (!slotCell || !itemCell || slotCell.tagName === 'th' || seenCells.has(itemCell)) continue;
+    seenCells.add(itemCell);
+    const slot = text($(slotCell));
+    const tagged = $(itemCell)
+      .find('[data-bg3-type="equipment"] .bg3-name')
+      .toArray()
+      .map((n) => text($(n)));
+    const plain = text($(itemCell));
+    const items = tagged.length ? tagged : plain && plain !== '-' ? [plain] : [];
+    let row = rows.at(-1);
+    if (row?.slot !== slot) rows.push((row = { slot, items: [] }));
+    for (const item of items) if (!row.items.includes(item)) row.items.push(item);
+  }
+  return rows;
+}
+
+function parseEquipment($: CheerioAPI): ActGear[] {
+  const section = sectionAfter($, /equipment|gear/i, 'h2');
+  if (!section) return [];
+  const acts: ActGear[] = [];
+  // The act being read; an h3 that names no act (e.g. "Consumables") ends it.
+  let act: ActGear | undefined;
+  let setup: GearSetup | undefined;
+  for (const el of section.toArray()) {
+    const node = $(el);
+    const tag = el.tagName.toLowerCase();
+    if (tag === 'h3') {
+      const number = /\bact\s*([123])\b/i.exec(text(node))?.[1];
+      act = number ? { act: Number(number) as ActGear['act'], setups: [] } : undefined;
+      if (act) acts.push(act);
+      setup = undefined;
+    } else if (!act) {
+      continue;
+    } else if (tag === 'h4') {
+      setup = { title: text(node), rows: [] };
+      act.setups.push(setup);
+    } else {
+      const tables = node.is('table') ? node : node.find('table');
+      for (const table of tables.toArray()) {
+        const rows = parseGearTable($, $(table));
+        if (!rows.length) continue;
+        if (!setup) act.setups.push((setup = { rows: [] }));
+        setup.rows.push(...rows);
+      }
+    }
+  }
+  return acts.map((a) => ({ ...a, setups: a.setups.filter((s) => s.rows.length > 0) }));
+}
+
 /** Pulls the parts of a guide article the importer understands. */
 export function readSections(articleHtml: string): GuideSections {
   const $ = load(articleHtml);
   const abilityTable = parseAbilityTable($);
   return {
     overview: parseOverview($),
+    equipment: parseEquipment($),
     races: firstColumn($, firstTable(sectionAfter($, /^(custom )?races?$/i))),
     backgrounds: firstColumn($, firstTable(sectionAfter($, /^backgrounds?$/i))),
     ...(abilityTable ? { abilityTable } : {}),

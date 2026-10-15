@@ -1,7 +1,9 @@
 # Data attribution
 
 `src/data/spells.json` is generated from the [bg3.wiki](https://bg3.wiki) `spells` Cargo table by
-`scripts/generate-spells.ts`. Everything else in `src/data/` (classes, races, backgrounds, feats,
+`scripts/generate-spells.ts`, and `src/data/items.json` from the `equipment`, `weapons` and
+`item_locations` tables by `scripts/generate-items.ts` (item effects are the wiki's text, cleaned of
+markup). Everything else in `src/data/` (classes, races, backgrounds, feats,
 features, option lists, weapon types) was written by hand from the bg3.wiki pages and tables named
 at the top of each file.
 

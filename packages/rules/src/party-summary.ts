@@ -1,6 +1,7 @@
 import { ABILITIES, type Ability, SKILLS, type Skill } from '@bg3planner/shared';
 import type { GameData } from '@bg3planner/gamedata';
 import type { DerivedCharacter } from './derive';
+import { ACT_NAMES, itemConflicts } from './equipment';
 import type { Party } from './party';
 import { MAX_ACTIVE } from './party';
 
@@ -27,6 +28,19 @@ export function partyIssues(party: Party, data: GameData): PartyIssue[] {
       });
     }
     seen.set(originId, member.id);
+  }
+  // Gear only clashes between characters who fight together.
+  const active = party.members.filter((m) => party.activeMemberIds.includes(m.id));
+  const names = new Map(active.map((m) => [m.id, m.name || 'Unnamed']));
+  for (const { act, itemId, memberIds } of itemConflicts(active, data)) {
+    const item = data.items.find((i) => i.id === itemId)!;
+    const who = memberIds.map((id) => names.get(id)!);
+    const list = `${who.slice(0, -1).join(', ')} and ${who.at(-1)}`;
+    issues.push({
+      severity: 'warning',
+      memberId: memberIds.at(-1)!,
+      message: `${ACT_NAMES[act]}: ${list} ${who.length === 2 ? 'both' : 'all'} plan to use ${item.name}, but there is only one.`,
+    });
   }
   if (party.activeMemberIds.length === 0) {
     issues.push({ severity: 'warning', message: 'No one is in the active party yet.' });

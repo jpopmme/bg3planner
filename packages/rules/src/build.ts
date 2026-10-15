@@ -28,6 +28,10 @@ export const levelEntrySchema = z
   })
   .strict();
 
+/** The game's three acts; each has its own loadout, since gear changes as the story goes on. */
+export const ACTS = ['act1', 'act2', 'act3'] as const;
+export type Act = (typeof ACTS)[number];
+
 /** Where an imported build came from, and what the importer could not settle. */
 export const buildSourceSchema = z
   .object({
@@ -42,13 +46,36 @@ export const buildSourceSchema = z
           .object({
             /** Character level the note is about; absent for character creation. */
             level: z.number().int().min(1).max(MAX_LEVEL).optional(),
+            /** Act whose gear the note is about. */
+            act: z.enum(ACTS).optional(),
             message: z.string().max(500),
           })
           .strict(),
       )
-      .max(100),
+      .max(200),
   })
   .strict();
+
+/** Equipment slots, in the order the game's inventory shows them. */
+export const EQUIP_SLOTS = [
+  'head',
+  'cloak',
+  'armour',
+  'gloves',
+  'boots',
+  'amulet',
+  'ring1',
+  'ring2',
+  'meleeMain',
+  'meleeOff',
+  'rangedMain',
+  'rangedOff',
+] as const;
+export type EquipSlot = (typeof EQUIP_SLOTS)[number];
+
+/** Item id per slot. */
+export const loadoutSchema = z.partialRecord(z.enum(EQUIP_SLOTS), idSchema);
+export const equipmentSchema = z.partialRecord(z.enum(ACTS), loadoutSchema);
 
 export const buildSchema = z
   .object({
@@ -68,6 +95,8 @@ export const buildSchema = z
       })
       .strict(),
     levels: z.array(levelEntrySchema).min(1).max(MAX_LEVEL),
+    /** Planned gear per act; absent until the player plans any. */
+    equipment: equipmentSchema.optional(),
     source: buildSourceSchema.optional(),
   })
   .strict();
@@ -76,3 +105,5 @@ export type Answer = z.infer<typeof answerSchema>;
 export type LevelEntry = z.infer<typeof levelEntrySchema>;
 export type Build = z.infer<typeof buildSchema>;
 export type BuildSource = z.infer<typeof buildSourceSchema>;
+export type Loadout = z.infer<typeof loadoutSchema>;
+export type Equipment = z.infer<typeof equipmentSchema>;

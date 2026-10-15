@@ -14,3 +14,4 @@ export type {
 } from './walker';
 export * from './party';
 export * from './party-summary';
+export * from './equipment';

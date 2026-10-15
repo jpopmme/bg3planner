@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { gameData } from '@bg3planner/gamedata';
 import type { ImportResult } from '@bg3planner/importer';
-import { MAX_ROSTER, deriveCharacter } from '@bg3planner/rules';
+import { ACT_NAMES, ACTS, MAX_ROSTER, deriveCharacter } from '@bg3planner/rules';
 import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { importGuide } from '../lib/api';
@@ -48,12 +48,20 @@ const summary = computed(() => {
   const c = character.value;
   if (!c) return '';
   const classes = c.classes.map((x) => `${x.level} ${x.subclass?.name ?? x.name}`).join(', ');
-  return `Level ${c.level}: ${classes}. ${c.subrace?.name ?? c.race?.name}, ${c.background?.name}, ${c.hitPoints} hit points.`;
+  const acts = ACTS.filter((a) => result.value?.build.equipment?.[a]).map((a) => ACT_NAMES[a]);
+  const gear = acts.length
+    ? ` Gear for ${acts.length > 1 ? `${acts.slice(0, -1).join(', ')} and ${acts.at(-1)}` : acts[0]}.`
+    : ' No gear.';
+  return `Level ${c.level}: ${classes}. ${c.subrace?.name ?? c.race?.name}, ${c.background?.name}, ${c.hitPoints} hit points.${gear}`;
 });
 const groupedNotes = computed(() => {
   const groups = new Map<string, string[]>();
   for (const note of result.value?.notes ?? []) {
-    const title = note.level ? `Level ${note.level}` : 'Character creation';
+    const title = note.act
+      ? `${ACT_NAMES[note.act]} gear`
+      : note.level
+        ? `Level ${note.level}`
+        : 'Character creation';
     groups.set(title, [...(groups.get(title) ?? []), note.message]);
   }
   return [...groups];
@@ -138,7 +146,7 @@ async function addToParty() {
       </section>
 
       <p class="muted small">
-        These notes stay with the character, next to the levels they are about.
+        These notes stay with the character, next to the levels and gear they are about.
       </p>
 
       <div class="actions">

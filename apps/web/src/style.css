@@ -10,6 +10,12 @@
   --error: #b42318;
   --class-fighter: #a4513a;
   --class-warlock: #6b3fa0;
+  /* Item rarities, in the game's colours, darkened to read on the light ground. */
+  --rarity-uncommon: #2c7a39;
+  --rarity-rare: #2160ad;
+  --rarity-very-rare: #7a3db5;
+  --rarity-legendary: #9a6400;
+  --rarity-story: #b04a14;
 
   --font-ui: 'Atkinson Hyperlegible', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-name: 'Grenze Gotisch', 'UnifrakturMaguntia', Georgia, serif;
@@ -39,6 +45,11 @@
     --error: #f0786b;
     --class-fighter: #d0785e;
     --class-warlock: #a77ad6;
+    --rarity-uncommon: #6cc27a;
+    --rarity-rare: #6ea8f0;
+    --rarity-very-rare: #b78ceb;
+    --rarity-legendary: #e2b24c;
+    --rarity-story: #ee8c52;
   }
 }
 

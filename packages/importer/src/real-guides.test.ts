@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { gameData } from '@bg3planner/gamedata';
-import { deriveCharacter } from '@bg3planner/rules';
+import { deriveCharacter, equipmentIssues } from '@bg3planner/rules';
 import { describe, expect, it } from 'vitest';
 import { importGamestegyGuide } from './index';
 
@@ -64,6 +64,26 @@ describe.skipIf(!existsSync(fixture('eldritch-hexknight')))('Eldritch Hexknight 
     expect(messages).toContain('4: The guide leaves spells open here.');
     expect(result.issues.every((i) => i.severity === 'warning')).toBe(true);
   });
+
+  it('imports the gear of Acts 2 and 3, which the rules accept', () => {
+    expect(build.equipment?.act1).toBeUndefined(); // the guide recommends none
+    expect(build.equipment?.act2).toMatchObject({
+      meleeMain: 'shadow-blade',
+      meleeOff: 'knife-of-the-undermountain-king',
+      armour: 'dark-justiciar-half-plate-very-rare',
+      ring1: 'shadow-cloaked-ring',
+      ring2: 'strange-conduit-ring',
+    });
+    expect(build.equipment?.act3).toMatchObject({
+      meleeMain: 'shadow-blade',
+      meleeOff: 'rhapsody',
+      head: 'helmet-of-grit',
+      amulet: 'amulet-of-greater-health',
+    });
+    expect(Object.keys(build.equipment?.act3 ?? {})).toHaveLength(11); // all but the ranged off hand
+    expect(equipmentIssues(build, gameData, character)).toEqual([]);
+    expect(deriveCharacter(build, gameData, { act: 'act3' }).hitPoints).toBe(147);
+  });
 });
 
 describe.skipIf(!existsSync(fixture('hexblade-warlock')))('Hexblade Warlock guide', () => {
@@ -89,6 +109,11 @@ describe.skipIf(!existsSync(fixture('hexblade-warlock')))('Hexblade Warlock guid
     expect(character.spells.some((s) => s.id === 'create-undead' && s.kind === 'extra')).toBe(true);
     expect(character.spells.some((s) => s.id === 'hellish-rebuke')).toBe(false); // replaced
     expect(result.issues.map((i) => i.message)).toEqual(['Warlock – Cantrips: choose 1']);
+  });
+
+  it('imports all three acts of gear the Hexblade is proficient with', () => {
+    expect(Object.keys(result.build.equipment ?? {})).toEqual(['act1', 'act2', 'act3']);
+    expect(equipmentIssues(result.build, gameData, character)).toEqual([]);
   });
 });
 

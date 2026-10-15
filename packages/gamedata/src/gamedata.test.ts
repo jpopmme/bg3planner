@@ -96,6 +96,16 @@ describe('findIntegrityIssues', () => {
     expect(issues).toContain('Elf: unknown spell "nope" at level 3');
   });
 
+  it('reports items with unknown weapon types', () => {
+    const data = copy();
+    const blade = data.items.find((i) => i.id === 'shadow-blade')!;
+    if (blade.kind !== 'weapon') throw new Error('Shadow Blade should be a weapon');
+    blade.weaponType = 'lightsabers';
+    expect(findIntegrityIssues(data)).toContain(
+      'item "shadow-blade" has unknown weapon type "lightsabers"',
+    );
+  });
+
   it('reports feats that add unknown resources or class-only choices', () => {
     const data = copy();
     const feat = data.feats.find((f) => f.id === 'martial-adept')!;

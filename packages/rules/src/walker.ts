@@ -681,6 +681,9 @@ export function walkBuild(build: Build, data: GameData): WalkResult {
       if (!levelGrant) return;
       addFeatures(levelGrant.features, source);
       levelGrant.skills?.forEach((s) => state.skills.add(s as Skill));
+      levelGrant.proficiencies?.armour?.forEach((a) => state.armour.add(a));
+      if (levelGrant.proficiencies?.shields) state.shields = true;
+      levelGrant.proficiencies?.weapons?.forEach((w) => state.weaponCategories.add(w));
       for (const [id, total] of Object.entries(levelGrant.resources ?? {})) {
         state.classResources.set(id, total);
       }

@@ -31,6 +31,28 @@ export const simpleTable = (heading: string, firstColumn: string[]) =>
     .map((c) => `<tr><td>${c}</td><td>Why it is good.</td></tr>`)
     .join('')}</tbody></table>`;
 
+/** An item link the way guides tag equipment. */
+export const itemLink = (name: string) =>
+  `<a class="bg3-equipment bg3-object-block" href="#" data-bg3-id="1" data-bg3-type="equipment"><img class="bg3-icon-block" alt="${name} icon bg3"><span class="bg3-name">${name}</span></a>`;
+
+/**
+ * A gear table shaped like Gamestegy's ("Slot | Item | Description"): the slot cell spans its
+ * items' rows. Items in `[brackets]` are written as plain text instead of item links.
+ */
+export function gearTable(rows: { slot: string; items: string[] }[]): string {
+  const cell = (item: string) => (item.startsWith('[') ? item.slice(1, -1) : itemLink(item));
+  const body = rows
+    .flatMap(({ slot, items }) =>
+      items.map((item, i) =>
+        i === 0
+          ? `<tr><td rowspan="${items.length}"><img alt="slot bg3">${slot}</td><td>${cell(item)}</td><td>Why it is good.</td></tr>`
+          : `<tr><td>${cell(item)}</td><td>Also good.</td></tr>`,
+      ),
+    )
+    .join('');
+  return `<table><tbody><tr><th>Slot</th><th>Item</th><th>Description</th></tr>${body}</tbody></table>`;
+}
+
 /** A post page with the article embedded the way Nuxt embeds it. */
 export function guidePage(article: string, title = 'Test Guide - Example Build'): string {
   const payload = stringify({

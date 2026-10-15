@@ -59,14 +59,32 @@ characters and companions, whose race, subrace and background are fixed as in th
 class is free, as after a respec). Each origin can be in the roster once. **Who rolls best**
 compares the active party's skill and saving throw bonuses and lists who lacks darkvision.
 
+## Equipment
+
+Each character's **Equipment** tab plans gear per act (Act 1, 2 and 3), slot by slot: head, cloak,
+armour, gloves, boots, amulet, two rings, and melee and ranged weapons for both hands. Search the
+item catalogue by name or effect. The planner checks that each item fits its slot, that
+two-handed weapons leave the off hand free, that dual-wielding uses light weapons or the Dual
+Wielder feat, and warns about armour, shields or weapons the character is not proficient with.
+The character sheet shows the chosen act with its gear on: Armour Class (with a breakdown), plus
+ability scores, hit points, saving throws and skills where an item's effect can be read.
+
+Most magic items exist once in the game. When two characters in the active party plan the same
+one in the same act, both the slot and the party page warn about it.
+
+The catalogue (935 items) is generated from bg3.wiki by
+`npm run generate:items -w @bg3planner/gamedata`; see `packages/gamedata/ATTRIBUTION.md`.
+
 ## Importing build guides
 
 **Import from a guide** (party page) turns a Gamestegy BG3 build guide into a character. Give the
 guide's link, or, if the server cannot fetch it, paste the page's source. The importer reads the
 guide's *Leveling Overview* table plus its race, background and ability tables, and places every
-pick with the rules engine, so only legal choices are imported. A review screen shows what the
-guide leaves to you ("any spell", a spell to replace, alternative feats); those notes stay with the
-character next to their levels.
+pick with the rules engine, so only legal choices are imported. Its *Equipment Recommendations*
+fill each act's gear: the first item per slot that the rules allow, from the first setup, keeping
+the previous act's item where an act lists nothing new. A review screen shows what the guide leaves
+to you ("any spell", a spell to replace, alternative feats and items); those notes stay with the
+character next to their levels and acts.
 
 Only the parsed choices and short notes are stored, with a link back to the guide; guide text is
 never kept. The server fetches a guide at most once a day (identifying itself as `bg3planner`).

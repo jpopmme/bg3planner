@@ -1,5 +1,10 @@
 import { gameData } from '@bg3planner/gamedata';
-import { GuideFormatError, importGamestegyGuide, isGamestegyGuideUrl } from '@bg3planner/importer';
+import {
+  GuideFormatError,
+  IMPORTER_VERSION,
+  importGamestegyGuide,
+  isGamestegyGuideUrl,
+} from '@bg3planner/importer';
 import type { FastifyPluginAsync } from 'fastify';
 import type { PartyStore } from '../party-store';
 
@@ -84,7 +89,7 @@ export const importRoutes: FastifyPluginAsync<ImportRoutesOptions> = async (
             .send({ error: 'Give a guide link, or paste the guide page’s HTML.' });
         }
 
-        const key = `${gameData.version}|${guideUrl.href}`;
+        const key = `${gameData.version}|${IMPORTER_VERSION}|${guideUrl.href}`;
         const fetchedAt = now();
         const cached = store.getCachedImport(
           key,

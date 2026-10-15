@@ -9,7 +9,8 @@
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
-    "generate:spells": "tsx scripts/generate-spells.ts"
+    "generate:spells": "tsx scripts/generate-spells.ts",
+    "generate:items": "tsx scripts/generate-items.ts"
   },
   "dependencies": {
     "@bg3planner/shared": "^0.0.0",

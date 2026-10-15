@@ -1,14 +1,19 @@
 import { gameData } from '@bg3planner/gamedata';
 import {
+  ACTS,
+  type Act,
   type Answer,
   type Build,
+  type EquipSlot,
   availableChoices,
   deriveCharacter,
+  equipmentIssues,
+  itemConflicts,
   validateBuild,
 } from '@bg3planner/rules';
 import { ABILITIES, type Ability } from '@bg3planner/shared';
 import { defineStore } from 'pinia';
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { newBuild } from './new-build';
 import { usePartyStore } from './party';
 
@@ -26,9 +31,54 @@ export const useBuildStore = defineStore('build', () => {
     set: (value: Build) => (party.currentMember.build = value),
   });
 
-  const character = computed(() => deriveCharacter(build.value, gameData));
+  /** The act whose gear the sheet shows; starts at the latest act with any gear planned. */
+  const act = ref<Act>('act1');
+  const latestPlannedAct = () =>
+    [...ACTS].reverse().find((a) => Object.keys(build.value.equipment?.[a] ?? {}).length) ?? 'act1';
+  watch(
+    () => party.currentMember.id,
+    () => (act.value = latestPlannedAct()),
+    { immediate: true },
+  );
+
+  const character = computed(() => deriveCharacter(build.value, gameData, { act: act.value }));
   const choices = computed(() => availableChoices(build.value, gameData));
   const issues = computed(() => validateBuild(build.value, gameData));
+  const gearIssues = computed(() => equipmentIssues(build.value, gameData, character.value));
+
+  /** Unique items this character shares with others in the active party, per act. */
+  const clashes = computed(() => {
+    const shown = party.shownParty;
+    const me = party.currentMember;
+    const others = shown.members.filter(
+      (m) => m.id !== me.id && shown.activeMemberIds.includes(m.id),
+    );
+    return itemConflicts([me, ...others], gameData)
+      .filter((c) => c.memberIds.includes(me.id))
+      .map((c) => ({
+        ...c,
+        others: c.memberIds
+          .filter((id) => id !== me.id)
+          .map((id) => others.find((m) => m.id === id)?.name || 'Unnamed'),
+      }));
+  });
+
+  /** Puts an item in a slot of an act's loadout, or empties the slot. */
+  function setItem(forAct: Act, slot: EquipSlot, itemId: string | undefined) {
+    const equipment = (build.value.equipment ??= {});
+    const loadout = (equipment[forAct] ??= {});
+    if (itemId) loadout[slot] = itemId;
+    else delete loadout[slot];
+    if (!Object.keys(loadout).length) delete equipment[forAct];
+    if (!Object.keys(equipment).length) delete build.value.equipment;
+  }
+
+  /** Starts an act's loadout as a copy of another act's. */
+  function copyLoadout(from: Act, to: Act) {
+    const source = build.value.equipment?.[from];
+    if (!source) return;
+    build.value.equipment = { ...build.value.equipment, [to]: { ...source } };
+  }
 
   /** Drops answers whose choice no longer exists, e.g. after changing race or a level's class. */
   function pruneStaleAnswers() {
@@ -153,5 +203,10 @@ export const useBuildStore = defineStore('build', () => {
     addLevel,
     removeLastLevel,
     setAnswer,
+    act,
+    gearIssues,
+    clashes,
+    setItem,
+    copyLoadout,
   };
 });

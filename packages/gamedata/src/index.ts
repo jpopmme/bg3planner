@@ -3,12 +3,13 @@ import { classes, subclasses } from './data/classes';
 import { feats } from './data/feats';
 import { features } from './data/features';
 import { optionGroups } from './data/options';
+import items from './data/items.json' with { type: 'json' };
 import { origins } from './data/origins';
 import { races } from './data/races';
 import { multiclassSpellSlots } from './data/spell-slots';
 import spells from './data/spells.json' with { type: 'json' };
 import { weaponTypes } from './data/weapons';
-import type { GameData, Spell } from './schema';
+import type { GameData, Item, Spell } from './schema';
 
 export * from './schema';
 export { findIntegrityIssues, maxSpellLevel } from './integrity';
@@ -33,5 +34,6 @@ export const gameData: GameData = {
   // JSON imports type enums as plain strings; the schema test checks the real values.
   spells: spells as Spell[],
   weaponTypes,
+  items: items as Item[],
   multiclassSpellSlots,
 };

@@ -136,6 +136,14 @@ export const choiceSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('weapon-proficiency'), count: positiveInt }).strict(),
 ]);
 
+const proficienciesSchema = z
+  .object({
+    armour: z.array(z.enum(['light', 'medium', 'heavy'])),
+    shields: z.boolean(),
+    weapons: z.array(z.enum(['simple', 'martial'])),
+  })
+  .strict();
+
 export const levelSchema = z
   .object({
     level: classLevelSchema,
@@ -145,6 +153,8 @@ export const levelSchema = z
     resources: z.record(idSchema, positiveInt).optional(),
     /** Skill proficiencies granted outright. */
     skills: z.array(skillSchema).optional(),
+    /** Armour and weapon proficiencies gained at this level (Hexblade's Hex Warrior). */
+    proficiencies: proficienciesSchema.partial().optional(),
   })
   .strict();
 
@@ -197,14 +207,6 @@ export const spellcastingSchema = z.discriminatedUnion('kind', [
 // ---------------------------------------------------------------------------
 // Classes and subclasses
 // ---------------------------------------------------------------------------
-
-const proficienciesSchema = z
-  .object({
-    armour: z.array(z.enum(['light', 'medium', 'heavy'])),
-    shields: z.boolean(),
-    weapons: z.array(z.enum(['simple', 'martial'])),
-  })
-  .strict();
 
 const patchSchema = z.string().regex(/^patch-\d+$/);
 
@@ -278,6 +280,100 @@ export const weaponTypeSchema = z
     handedness: z.enum(['one-handed', 'two-handed', 'versatile']),
   })
   .strict();
+
+// ---------------------------------------------------------------------------
+// Items (generated from bg3.wiki, see scripts/generate-items.ts)
+// ---------------------------------------------------------------------------
+
+export const ITEM_KINDS = [
+  'head',
+  'cloak',
+  'armour',
+  'gloves',
+  'boots',
+  'amulet',
+  'ring',
+  'shield',
+  'weapon',
+] as const;
+export const itemKindSchema = z.enum(ITEM_KINDS);
+
+export const RARITIES = ['common', 'uncommon', 'rare', 'very rare', 'legendary', 'story'] as const;
+
+/** An item that sets an ability to at least `set`, or adds `add` up to `max`. */
+const abilityEffectSchema = z.union([
+  z.object({ ability: abilitySchema, set: positiveInt }).strict(),
+  z.object({ ability: abilitySchema, add: z.number().int(), max: positiveInt.optional() }).strict(),
+]);
+
+const itemBase = {
+  id: idSchema,
+  name: z.string().min(1),
+  rarity: z.enum(RARITIES),
+  /**
+   * The game has a single copy, so only one character can carry it. Every non-common item is
+   * unique except generic enchanted ones ("Longsword +1") and those found in five or more places.
+   */
+  unique: z.boolean(),
+  /** Armour Class added on top of armour and shield, e.g. Ring of Protection's +1. */
+  armourClassBonus: z.number().int().optional(),
+  /** Parsed from `effects`: Gloves of Dexterity set Dexterity to 18, Birthright adds 2 Charisma. */
+  abilityEffects: z.array(abilityEffectSchema).optional(),
+  /** Parsed from `effects`; `all` applies to every saving throw. */
+  savingThrowBonus: z.partialRecord(z.enum([...ABILITIES, 'all']), z.number().int()).optional(),
+  /** Parsed from `effects`, e.g. `Performance +1`. */
+  skillBonus: z.partialRecord(skillSchema, z.number().int()).optional(),
+  /** Special properties as plain text, e.g. `Armour Class +1`. */
+  effects: z.array(z.string().min(1)),
+  /** Names of the passives the item grants, e.g. `Grit`. */
+  passives: z.array(z.string().min(1)),
+  /** Page title on bg3.wiki. */
+  wikiPage: z.string().min(1),
+};
+
+export const itemSchema = z.discriminatedUnion('kind', [
+  z
+    .object({
+      ...itemBase,
+      kind: z.enum(['head', 'cloak', 'gloves', 'boots', 'amulet', 'ring']),
+    })
+    .strict(),
+  z
+    .object({
+      ...itemBase,
+      kind: z.literal('armour'),
+      /** Null for clothing and robes, which anyone can wear. */
+      proficiency: z.enum(['light', 'medium', 'heavy']).nullable(),
+      /** Base Armour Class, enchantment included. */
+      armourClass: z.number().int().positive(),
+      /** Medium armour that adds the full Dexterity modifier (Armour of Agility). */
+      noDexterityCap: z.boolean().optional(),
+      stealthDisadvantage: z.boolean(),
+    })
+    .strict(),
+  z
+    .object({
+      ...itemBase,
+      kind: z.literal('shield'),
+      /** Armour Class the shield adds, enchantment included. */
+      shieldBonus: z.number().int().positive(),
+    })
+    .strict(),
+  z
+    .object({
+      ...itemBase,
+      kind: z.literal('weapon'),
+      weaponType: idSchema,
+      enchantment: z.number().int().optional(),
+      /** e.g. `1d6 + 1 Piercing`, extra damage riders appended (`+ 1d4 Fire`). */
+      damage: z.string().min(1),
+      versatileDamage: z.string().min(1).optional(),
+      properties: z.array(z.enum(['finesse', 'heavy', 'light', 'reach', 'thrown'])),
+      /** Actions only this weapon has, e.g. Phalar Aluve's `Shriek`. */
+      actions: z.array(z.string().min(1)).optional(),
+    })
+    .strict(),
+]);
 
 /** A spell a race grants on its own once the character reaches `characterLevel`. */
 const innateSpellSchema = z.object({ characterLevel: classLevelSchema, spell: idSchema }).strict();
@@ -386,6 +482,7 @@ export const gameDataSchema = z
     optionGroups: z.array(optionGroupSchema),
     spells: z.array(spellSchema),
     weaponTypes: z.array(weaponTypeSchema),
+    items: z.array(itemSchema),
     multiclassSpellSlots: slotTableSchema,
   })
   .strict();
@@ -402,6 +499,10 @@ export type Spellcasting = z.infer<typeof spellcastingSchema>;
 export type ClassDef = z.infer<typeof classSchema>;
 export type SubclassDef = z.infer<typeof subclassSchema>;
 export type WeaponType = z.infer<typeof weaponTypeSchema>;
+export type Item = z.infer<typeof itemSchema>;
+export type ItemKind = z.infer<typeof itemKindSchema>;
+export type Rarity = (typeof RARITIES)[number];
+export type AbilityEffect = z.infer<typeof abilityEffectSchema>;
 export type Race = z.infer<typeof raceSchema>;
 export type Subrace = z.infer<typeof subraceSchema>;
 export type Background = z.infer<typeof backgroundSchema>;

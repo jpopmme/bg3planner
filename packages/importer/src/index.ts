@@ -1,4 +1,10 @@
 export { importGamestegyGuide, type ImportNote, type ImportResult } from './gamestegy';
+
+/**
+ * Bumped whenever the importer reads guides differently, so cached results from an older importer
+ * are not reused. 2: gear per act.
+ */
+export const IMPORTER_VERSION = 2;
 export { GuideFormatError, extractPost, type GuidePost } from './nuxt';
 export { matchName } from './match';
 

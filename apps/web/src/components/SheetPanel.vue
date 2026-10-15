@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { gameData } from '@bg3planner/gamedata';
-import type { DerivedSpell } from '@bg3planner/rules';
+import { ACT_NAMES, type DerivedSpell } from '@bg3planner/rules';
 import { ABILITIES } from '@bg3planner/shared';
 import { computed } from 'vue';
 import { titleCase } from '../lib/names';
@@ -8,6 +8,10 @@ import { useBuildStore } from '../stores/build';
 
 const store = useBuildStore();
 const c = computed(() => store.character);
+
+const gearPlanned = computed(
+  () => Object.keys(store.build.equipment?.[store.act] ?? {}).length > 0,
+);
 
 const signed = (n: number) => (n >= 0 ? `+${n}` : `${n}`);
 const ABBREVIATIONS = {
@@ -68,6 +72,10 @@ const todo = computed(() => store.issues.filter((i) => i.severity === 'warning')
         <dd>{{ c.hitPoints }}</dd>
       </div>
       <div>
+        <dt>Armour Class</dt>
+        <dd>{{ c.armourClass }}</dd>
+      </div>
+      <div>
         <dt>Proficiency</dt>
         <dd>{{ signed(c.proficiencyBonus) }}</dd>
       </div>
@@ -78,6 +86,10 @@ const todo = computed(() => store.issues.filter((i) => i.severity === 'warning')
       <div>
         <dt>Darkvision</dt>
         <dd>{{ c.darkvision ? `${c.darkvision} m` : 'None' }}</dd>
+      </div>
+      <div>
+        <dt>Gear</dt>
+        <dd data-vital="gear">{{ gearPlanned ? ACT_NAMES[store.act] : 'None' }}</dd>
       </div>
     </dl>
 
@@ -187,7 +199,7 @@ h3 {
 
 .vitals {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 10px;
   margin: 0;
 }
