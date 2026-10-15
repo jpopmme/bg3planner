@@ -21,7 +21,7 @@ export interface DescriptionSources {
 
 export interface Described {
   spells: Pick<Spell, 'id' | 'wikiPage'>[];
-  features: Pick<Feature, 'id' | 'name' | 'kind'>[];
+  features: Pick<Feature, 'id' | 'name' | 'kind' | 'wikiPage'>[];
   feats: Pick<Feat, 'id' | 'name'>[];
   optionGroups: Pick<OptionGroup, 'id' | 'name' | 'options'>[];
 }
@@ -127,7 +127,8 @@ export function toDescriptions(
   };
 
   for (const feature of ours.features) {
-    put(descriptionKey.feature(feature.id), find([feature.name], feature.kind !== 'passive'));
+    const names = feature.wikiPage ? [feature.wikiPage, feature.name] : [feature.name];
+    put(descriptionKey.feature(feature.id), find(names, feature.kind !== 'passive'));
   }
 
   const feats = featDescriptions(sources.featsHtml);
@@ -138,6 +139,7 @@ export function toDescriptions(
       // The game names some options after their group or how they are used:
       // "Arcane Shot: Banishing Arrow", "Elemental Adept: Fire", "Trip Attack (Melee)".
       const names = [
+        ...(option.wikiPage ? [option.wikiPage] : []),
         option.name,
         `${group.name}: ${option.name}`,
         `Arcane Shot: ${option.name}`,

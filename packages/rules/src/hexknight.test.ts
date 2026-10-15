@@ -54,8 +54,22 @@ describe('11 Eldritch Knight / 1 Hexblade', () => {
 
   it('casts warlock spells with Charisma and Eldritch Knight spells with Intelligence', () => {
     expect(character.casters).toEqual([
-      { classId: 'fighter', ability: 'intelligence', saveDc: 11, attackBonus: 3 },
-      { classId: 'warlock', ability: 'charisma', saveDc: 17, attackBonus: 9 },
+      {
+        classId: 'fighter',
+        ability: 'intelligence',
+        saveDc: 11,
+        attackBonus: 3,
+        preparation: 'known',
+        maxSpellLevel: 2,
+      },
+      {
+        classId: 'warlock',
+        ability: 'charisma',
+        saveDc: 17,
+        attackBonus: 9,
+        preparation: 'known',
+        maxSpellLevel: 1,
+      },
     ]);
   });
 

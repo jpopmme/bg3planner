@@ -46,7 +46,7 @@ export function optionName(choice: Choice, id: string): DisplayName {
       return {
         name: option?.name ?? titleCase(id),
         ...(option?.minClassLevel && option.minClassLevel > 2
-          ? { detail: `Warlock ${option.minClassLevel}+` }
+          ? { detail: `Class level ${option.minClassLevel}+` }
           : {}),
       };
     }
@@ -61,6 +61,7 @@ export function optionName(choice: Choice, id: string): DisplayName {
         : { name: titleCase(id) };
     }
     case 'skill':
+    case 'expertise':
     case 'ability-increase':
       return { name: titleCase(id) };
   }

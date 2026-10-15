@@ -186,32 +186,74 @@ export interface ArmourClassPart {
  * Armour Class with the given gear on: the armour (or 10 unarmoured) plus the Dexterity modifier
  * it allows, the shield, Defence, and bonuses from other items.
  */
+/**
+ * Armour Class without armour, from a class feature: Barbarians add Constitution (shields
+ * allowed), Monks add Wisdom (no shield), Draconic sorcerers have a base of 13.
+ */
+export type UnarmouredDefence = 'barbarian' | 'monk' | 'draconic';
+
+export interface ArmourClassEffects {
+  feats: string[];
+  fightingStyles: string[];
+  unarmouredDefences: UnarmouredDefence[];
+}
+
+/**
+ * Armour Class with the given gear on: the armour (or 10 unarmoured, or the best Unarmoured
+ * Defence) plus the Dexterity modifier it allows, the shield, Defence, and bonuses from other
+ * items. Clothing and robes count as no armour.
+ */
 export function armourClassParts(
   items: Partial<Record<EquipSlot, Item>>,
-  dexterityModifier: number,
-  effects: { feats: string[]; fightingStyles: string[] },
+  modifiers: Pick<Record<Ability, number>, 'dexterity' | 'constitution' | 'wisdom'>,
+  effects: ArmourClassEffects,
 ): ArmourClassPart[] {
-  const armour = items.armour?.kind === 'armour' ? items.armour : undefined;
-  const parts: ArmourClassPart[] = [
-    { label: armour?.name ?? 'Unarmoured', value: armour?.armourClass ?? 10 },
-  ];
-
-  let dexterity = dexterityModifier;
-  if (armour?.proficiency === 'heavy') dexterity = 0;
-  else if (armour?.proficiency === 'medium' && !armour.noDexterityCap) {
-    dexterity = Math.min(dexterity, effects.feats.includes('medium-armour-master') ? 3 : 2);
-  }
-  if (dexterity !== 0) parts.push({ label: 'Dexterity', value: dexterity });
-
+  const worn = items.armour?.kind === 'armour' ? items.armour : undefined;
+  const armour = worn?.proficiency ? worn : undefined;
   const shield = items.meleeOff?.kind === 'shield' ? items.meleeOff : undefined;
+  let parts: ArmourClassPart[];
+
+  if (armour) {
+    parts = [{ label: armour.name, value: armour.armourClass }];
+    let dexterity = modifiers.dexterity;
+    if (armour.proficiency === 'heavy') dexterity = 0;
+    else if (armour.proficiency === 'medium' && !armour.noDexterityCap) {
+      dexterity = Math.min(dexterity, effects.feats.includes('medium-armour-master') ? 3 : 2);
+    }
+    if (dexterity !== 0) parts.push({ label: 'Dexterity', value: dexterity });
+  } else {
+    const options: ArmourClassPart[][] = [
+      [{ label: worn?.name ?? 'Unarmoured', value: worn?.armourClass ?? 10 }],
+    ];
+    if (effects.unarmouredDefences.includes('barbarian')) {
+      options.push([
+        { label: 'Unarmoured Defence', value: 10 },
+        { label: 'Constitution', value: modifiers.constitution },
+      ]);
+    }
+    if (effects.unarmouredDefences.includes('monk') && !shield) {
+      options.push([
+        { label: 'Unarmoured Defence', value: 10 },
+        { label: 'Wisdom', value: modifiers.wisdom },
+      ]);
+    }
+    if (effects.unarmouredDefences.includes('draconic')) {
+      options.push([{ label: 'Draconic Resilience', value: 13 }]);
+    }
+    const total = (o: ArmourClassPart[]) => o.reduce((sum, p) => sum + p.value, 0);
+    parts = options.reduce((best, o) => (total(o) > total(best) ? o : best));
+    if (modifiers.dexterity !== 0)
+      parts.splice(1, 0, { label: 'Dexterity', value: modifiers.dexterity });
+  }
+
   if (shield) parts.push({ label: shield.name, value: shield.shieldBonus });
-  if (armour?.proficiency && effects.fightingStyles.includes('defence')) {
+  if (armour && effects.fightingStyles.includes('defence')) {
     parts.push({ label: 'Defence', value: 1 });
   }
   for (const item of Object.values(items)) {
     if (item.armourClassBonus) parts.push({ label: item.name, value: item.armourClassBonus });
   }
-  return parts;
+  return parts.filter((p) => p.value !== 0 || p === parts[0]);
 }
 
 /** Ability scores with gear on: "set" items raise a score to at least their value, then bonuses add up to their cap. */

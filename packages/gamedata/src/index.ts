@@ -1,5 +1,5 @@
 import { backgrounds } from './data/backgrounds';
-import { classes, subclasses } from './data/classes';
+import { classFeatures, classOptionGroups, classes, subclasses } from './data/classes';
 import { feats } from './data/feats';
 import { features } from './data/features';
 import { optionGroups } from './data/options';
@@ -38,8 +38,8 @@ export const gameData: GameData = {
   backgrounds,
   feats,
   origins,
-  features,
-  optionGroups,
+  features: [...features, ...classFeatures],
+  optionGroups: [...optionGroups, ...classOptionGroups],
   // JSON imports type enums as plain strings; the schema test checks the real values.
   spells: spells as Spell[],
   weaponTypes,

@@ -7,10 +7,16 @@ import {
   abilityModifier,
   proficiencyBonus,
 } from '@bg3planner/shared';
-import type { Feature, GameData, Spellcasting } from '@bg3planner/gamedata';
+import {
+  type Feature,
+  type GameData,
+  type Spellcasting,
+  maxSpellLevel,
+} from '@bg3planner/gamedata';
 import type { Act, Build } from './build';
 import {
   type ArmourClassPart,
+  type UnarmouredDefence,
   applyAbilityEffects,
   armourClassParts,
   equippedItems,
@@ -28,6 +34,21 @@ const HIT_POINTS_PER_LEVEL: Record<string, number> = {
 };
 const SPEED_BONUS: Record<string, number> = { mobile: 3 }; // feat
 const DARKVISION_RANGE: Record<string, number> = { darkvision: 12, 'superior-darkvision': 24 };
+/** Hit points per level of one class (Draconic Resilience: per Sorcerer level). */
+const HIT_POINTS_PER_CLASS_LEVEL: Record<string, { classId: string; amount: number }> = {
+  'draconic-resilience': { classId: 'sorcerer', amount: 1 },
+};
+const UNARMOURED_DEFENCES: Record<string, UnarmouredDefence> = {
+  'unarmoured-defence-barbarian': 'barbarian',
+  'unarmoured-defence-monk': 'monk',
+  'draconic-resilience': 'draconic',
+};
+/** Monk speed without armour or shield, by Monk level: +3 m at 2, +4.5 m at 6, +6 m at 10. */
+const UNARMOURED_MOVEMENT: [number, number][] = [
+  [10, 6],
+  [6, 4.5],
+  [2, 3],
+];
 
 export interface DerivedClass {
   id: string;
@@ -41,6 +62,12 @@ export interface DerivedCaster {
   ability: Ability;
   saveDc: number;
   attackBonus: number;
+  /** How the class gets its spells (see the dataset's `preparation`). */
+  preparation: 'known' | 'spellbook' | 'whole-list';
+  /** Spells prepared each day, for spellbook and whole-list casters. */
+  prepares?: number;
+  /** Highest spell level this class alone can cast. */
+  maxSpellLevel: number;
 }
 
 export interface DerivedSpell {
@@ -144,6 +171,10 @@ export function deriveCharacter(
     hitPoints += Math.max(1, base + conMod);
   });
   for (const id of effectIds) hitPoints += (HIT_POINTS_PER_LEVEL[id] ?? 0) * level;
+  for (const id of effectIds) {
+    const perClass = HIT_POINTS_PER_CLASS_LEVEL[id];
+    if (perClass) hitPoints += perClass.amount * (state.classLevels.get(perClass.classId) ?? 0);
+  }
 
   const origin = index.origins.get(build.originId ?? 'custom');
   const race = index.races.get(build.raceId);
@@ -173,10 +204,23 @@ export function deriveCharacter(
     item ? { id: item.id, name: item.name } : undefined;
   const gearBonus = (get: (item: (typeof worn)[number]) => number | undefined) =>
     worn.reduce((sum, item) => sum + (get(item) ?? 0), 0);
-  const acParts = armourClassParts(gear, abilityModifiers.dexterity, {
+  const acParts = armourClassParts(gear, abilityModifiers, {
     feats: featIds,
     fightingStyles: state.options.get('fighting-styles') ?? [],
+    unarmouredDefences: effectIds.flatMap((id) => UNARMOURED_DEFENCES[id] ?? []),
   });
+
+  // Speed from class features depends on what is worn (nothing, without an act).
+  const bodyArmour = gear.armour?.kind === 'armour' ? gear.armour.proficiency : null;
+  const shield = gear.meleeOff?.kind === 'shield';
+  let classSpeed = 0;
+  if (effectIds.includes('fast-movement') && bodyArmour !== 'heavy') classSpeed += 3;
+  if (effectIds.includes('unarmoured-movement') && !bodyArmour && !shield) {
+    const monk = state.classLevels.get('monk') ?? 0;
+    classSpeed += UNARMOURED_MOVEMENT.find(([lvl]) => monk >= lvl)?.[1] ?? 0;
+  }
+  // Jack of All Trades: half proficiency (rounded down) on checks without proficiency.
+  const jack = effectIds.includes('jack-of-all-trades') ? Math.floor(prof / 2) : 0;
 
   const optional = <K extends string, V>(key: K, value: V | undefined) =>
     (value === undefined ? {} : { [key]: value }) as Partial<Record<K, V>>;
@@ -192,7 +236,8 @@ export function deriveCharacter(
     ...optional('act', act),
     speed:
       (subrace?.speed ?? race?.speed ?? 9) +
-      effectIds.reduce((sum, id) => sum + (SPEED_BONUS[id] ?? 0), 0),
+      effectIds.reduce((sum, id) => sum + (SPEED_BONUS[id] ?? 0), 0) +
+      classSpeed,
     darkvision: Math.max(0, ...effectIds.map((id) => DARKVISION_RANGE[id] ?? 0)),
     abilityScores,
     abilityModifiers,
@@ -215,7 +260,7 @@ export function deriveCharacter(
       SKILLS.map((skill) => [
         skill,
         abilityModifiers[SKILL_ABILITIES[skill]] +
-          (state.skills.has(skill) ? prof : 0) +
+          (state.skills.has(skill) ? prof : jack) +
           (state.expertise.has(skill) ? prof : 0) +
           gearBonus((item) => item.skillBonus?.[skill]),
       ]),
@@ -234,12 +279,22 @@ export function deriveCharacter(
     })),
     options: Object.fromEntries(state.options),
     spellSlots: spellSlots(casters, data.multiclassSpellSlots),
-    casters: casters.map(({ classId, spellcasting }) => ({
-      classId,
-      ability: spellcasting.ability,
-      saveDc: 8 + prof + abilityModifiers[spellcasting.ability],
-      attackBonus: prof + abilityModifiers[spellcasting.ability],
-    })),
+    casters: casters.map(({ classId, spellcasting, level: classLevel }) => {
+      const preparation = spellcasting.preparation ?? 'known';
+      const modifier = abilityModifiers[spellcasting.ability];
+      // Paladins prepare half their level; Clerics, Druids and Wizards their full level.
+      const prepared =
+        (spellcasting.kind === 'half' ? Math.floor(classLevel / 2) : classLevel) + modifier;
+      return {
+        classId,
+        ability: spellcasting.ability,
+        saveDc: 8 + prof + modifier,
+        attackBonus: prof + modifier,
+        preparation,
+        ...(preparation === 'known' ? {} : { prepares: Math.max(1, prepared) }),
+        maxSpellLevel: maxSpellLevel(spellcasting, classLevel),
+      };
+    }),
     spells: state.spells.flatMap((s) => {
       const spell = index.spells.get(s.spellId);
       if (!spell) return [];

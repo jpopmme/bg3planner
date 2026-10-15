@@ -54,6 +54,24 @@ export const features = [
   { id: 'hexblades-curse', name: "Hexblade's Curse", kind: 'action' },
   { id: 'accursed-spectre', name: 'Accursed Spectre', kind: 'reaction' },
   { id: 'armour-of-hexes', name: 'Armour of Hexes', kind: 'reaction' },
+  // Shared by several classes; derive.ts gives some of these their effect, keyed by id.
+  { id: 'evasion', name: 'Evasion', kind: 'passive' },
+  {
+    id: 'unarmoured-defence-barbarian',
+    name: 'Unarmoured Defence',
+    kind: 'passive',
+    wikiPage: 'Unarmoured Defence (Barbarian)',
+  },
+  {
+    id: 'unarmoured-defence-monk',
+    name: 'Unarmoured Defence',
+    kind: 'passive',
+    wikiPage: 'Unarmoured Defence (Monk)',
+  },
+  { id: 'fast-movement', name: 'Fast Movement', kind: 'passive' },
+  { id: 'unarmoured-movement', name: 'Unarmoured Movement', kind: 'passive' },
+  { id: 'draconic-resilience', name: 'Draconic Resilience', kind: 'passive' },
+  { id: 'jack-of-all-trades', name: 'Jack of All Trades', kind: 'passive' },
   // Races: senses and weapon training
   { id: 'darkvision', name: 'Darkvision', kind: 'passive' },
   { id: 'superior-darkvision', name: 'Superior Darkvision', kind: 'passive' },

@@ -126,6 +126,7 @@ function candidates(slot: ChoiceSlot, data: GameData, ids: string[]): Named[] {
     case 'weapon-proficiency':
       return lookup(data.weaponTypes);
     case 'skill':
+    case 'expertise':
     case 'ability-increase':
       return ids.map((id) => ({ id, name: id.replace(/-/g, ' ') }));
   }

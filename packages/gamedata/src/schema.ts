@@ -51,6 +51,8 @@ export const featureSchema = z.object({
   name: z.string().min(1),
   /** `action` covers anything used from the hotbar: actions, bonus actions and free actions. */
   kind: z.enum(['passive', 'action', 'reaction']),
+  /** bg3.wiki page, when it differs from the name ("Unarmoured Defence (Monk)"). */
+  wikiPage: z.string().min(1).optional(),
 });
 
 /** One pick in an option group (a fighting style, an invocation, a manoeuvre, ...). */
@@ -59,6 +61,27 @@ export const optionSchema = z.object({
   name: z.string().min(1),
   /** Lowest level of the granting class at which this option can be picked. */
   minClassLevel: classLevelSchema.optional(),
+  /** bg3.wiki page, when it differs from the name ("Draconic Ancestry: Red (Fire)"). */
+  wikiPage: z.string().min(1).optional(),
+  /**
+   * What picking the option gives besides itself: a Favoured Enemy's skill, a land's circle
+   * spells (always prepared), a Wildheart aspect's features.
+   */
+  grants: z
+    .object({
+      features: z.array(idSchema).min(1).optional(),
+      skills: z.array(skillSchema).min(1).optional(),
+      /** Spells (or cantrips) the character always has, cast with the class's ability. */
+      spells: z.array(idSchema).min(1).optional(),
+      armour: z
+        .array(z.enum(['light', 'medium', 'heavy']))
+        .min(1)
+        .optional(),
+      shields: z.literal(true).optional(),
+      weaponTypes: z.array(idSchema).min(1).optional(),
+    })
+    .strict()
+    .optional(),
 });
 
 export const optionGroupSchema = z.object({
@@ -90,7 +113,15 @@ export const choiceSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('subclass') }).strict(),
   /** A feat or an Ability Improvement. */
   z.object({ type: z.literal('feat') }).strict(),
-  z.object({ type: z.literal('option'), group: idSchema, count: positiveInt }).strict(),
+  z
+    .object({
+      type: z.literal('option'),
+      group: idSchema,
+      count: positiveInt,
+      /** Only these options of the group (a Paladin picks from four of the fighting styles). */
+      only: z.array(idSchema).min(1).optional(),
+    })
+    .strict(),
   z
     .object({
       type: z.literal('cantrip'),
@@ -134,6 +165,18 @@ export const choiceSchema = z.discriminatedUnion('type', [
     .strict(),
   /** Gain proficiency with weapon types of your choice. */
   z.object({ type: z.literal('weapon-proficiency'), count: positiveInt }).strict(),
+  /**
+   * Gain expertise in skills the character is proficient in (Rogue, Bard). With
+   * `grantsProficiency`, any skill in `from` qualifies and becomes proficient too (Knowledge Domain).
+   */
+  z
+    .object({
+      type: z.literal('expertise'),
+      count: positiveInt,
+      from: z.array(skillSchema).min(1).optional(),
+      grantsProficiency: z.literal(true).optional(),
+    })
+    .strict(),
 ]);
 
 const proficienciesSchema = z
@@ -153,6 +196,11 @@ export const levelSchema = z
     resources: z.record(idSchema, positiveInt).optional(),
     /** Skill proficiencies granted outright. */
     skills: z.array(skillSchema).optional(),
+    /**
+     * Spells always prepared from this level on (Domain, Oath and Circle spells), cast with the
+     * class's spellcasting ability. They do not count against spells known or prepared.
+     */
+    spells: z.array(idSchema).min(1).optional(),
     /** Armour and weapon proficiencies gained at this level (Hexblade's Hex Warrior). */
     proficiencies: proficienciesSchema.partial().optional(),
   })
@@ -173,6 +221,14 @@ const slotRowSchema = z.array(z.number().int().nonnegative()).max(9);
 const knownCounts = {
   ability: abilitySchema,
   spellList: idSchema,
+  /**
+   * How spells become usable:
+   * - `known` (default): the spells picked are the spells cast (Bard, Sorcerer, Warlock, Ranger);
+   * - `spellbook`: picks fill a spellbook, and a number of them are prepared each day (Wizard);
+   * - `whole-list`: nothing is picked; any spell of the class list can be prepared each day
+   *   (Cleric, Druid, Paladin). `spellsKnown` is then all zeros.
+   */
+  preparation: z.enum(['known', 'spellbook', 'whole-list']).optional(),
   /** Cantrips known at each class level (index 0 = level 1). */
   cantripsKnown: perClassLevel(z.number().int().nonnegative()),
   /** Leveled spells known at each class level, excluding extras such as Mystic Arcanum. */

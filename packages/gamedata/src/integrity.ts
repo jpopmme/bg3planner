@@ -115,7 +115,15 @@ export function findIntegrityIssues(data: GameData): string[] {
           issues.push(`${where}: unknown option group "${choice.group}"`);
           return;
         }
-        const available = group.options.filter((o) => (o.minClassLevel ?? 1) <= classLevel);
+        for (const id of choice.only ?? []) {
+          if (!group.options.some((o) => o.id === id)) {
+            issues.push(`${where}: "${id}" is not an option of "${group.id}"`);
+          }
+        }
+        const available = group.options.filter(
+          (o) =>
+            (o.minClassLevel ?? 1) <= classLevel && (!choice.only || choice.only.includes(o.id)),
+        );
         if (available.length < choice.count) {
           issues.push(
             `${where}: picks ${choice.count} from "${group.id}" but only ${available.length} are available`,
@@ -181,6 +189,16 @@ export function findIntegrityIssues(data: GameData): string[] {
         }
         return;
       }
+      case 'expertise': {
+        const pool = choice.from ?? SKILLS;
+        if (pool.length < choice.count) {
+          issues.push(`${where}: picks ${choice.count} skills from a pool of ${pool.length}`);
+        }
+        if (choice.grantsProficiency && !choice.from) {
+          issues.push(`${where}: grantsProficiency needs a "from" list`);
+        }
+        return;
+      }
     }
   };
 
@@ -188,6 +206,15 @@ export function findIntegrityIssues(data: GameData): string[] {
     for (const lvl of levels) {
       const where = `${owner} level ${lvl.level}`;
       useFeatures(where, lvl.features);
+      for (const id of lvl.spells ?? []) {
+        const spell = spellsById.get(id);
+        if (!spell) issues.push(`${where}: unknown spell "${id}"`);
+        else if (!caster || caster === 'innate')
+          issues.push(`${where}: grants spells without spellcasting`);
+        else if (spell.level > maxSpellLevel(caster, lvl.level)) {
+          issues.push(`${where}: grants "${id}" (level ${spell.level}) before it can be cast`);
+        }
+      }
       lvl.choices.forEach((choice, i) =>
         checkChoice(`${where} choice ${i + 1} (${choice.type})`, choice, lvl.level, caster),
       );
@@ -314,6 +341,20 @@ export function findIntegrityIssues(data: GameData): string[] {
     }
   }
   if (!data.origins.some((o) => o.kind === 'custom')) issues.push('no custom origin');
+
+  for (const group of data.optionGroups) {
+    for (const option of group.options) {
+      const where = `Option ${group.id}/${option.id}`;
+      const grants = option.grants;
+      useFeatures(where, grants?.features);
+      for (const id of grants?.spells ?? []) {
+        if (!spellsById.has(id)) issues.push(`${where}: unknown spell "${id}"`);
+      }
+      for (const id of grants?.weaponTypes ?? []) {
+        if (!weaponTypeIds.has(id)) issues.push(`${where}: unknown weapon type "${id}"`);
+      }
+    }
+  }
 
   for (const id of featureIds) {
     if (!usedFeatures.has(id)) issues.push(`feature "${id}" is never granted`);

@@ -4,6 +4,7 @@ import type {
   ClassDef,
   Feat,
   GameData,
+  Option as OptionDef,
   Race,
   Spell,
   SubclassDef,
@@ -52,7 +53,11 @@ export interface ChoiceSlot {
   optional: boolean;
 }
 
-export type SpellKind = 'cantrip' | 'spell' | 'extra' | 'innate';
+/**
+ * `granted`: always prepared by a subclass or an option (Domain, Oath and Circle spells, a
+ * Favoured Enemy's cantrip); it is cast with the class's ability and never replaced.
+ */
+export type SpellKind = 'cantrip' | 'spell' | 'extra' | 'innate' | 'granted';
 
 export interface KnownSpell {
   spellId: string;
@@ -251,7 +256,12 @@ export function walkBuild(build: Build, data: GameData): WalkResult {
         return {
           kind: 'ids',
           ids: (group?.options ?? [])
-            .filter((o) => (o.minClassLevel ?? 1) <= ctx.classLevel && !taken.includes(o.id))
+            .filter(
+              (o) =>
+                (o.minClassLevel ?? 1) <= ctx.classLevel &&
+                !taken.includes(o.id) &&
+                (!choice.only || choice.only.includes(o.id)),
+            )
             .map((o) => o.id),
         };
       }
@@ -295,6 +305,15 @@ export function walkBuild(build: Build, data: GameData): WalkResult {
           ids: index.data.weaponTypes
             .filter((w) => !state.weaponCategories.has(w.category) && !state.weaponTypes.has(w.id))
             .map((w) => w.id),
+        };
+      case 'expertise':
+        return {
+          kind: 'ids',
+          ids: (choice.from ?? SKILLS).filter(
+            (s) =>
+              !state.expertise.has(s as Skill) &&
+              (choice.grantsProficiency || state.skills.has(s as Skill)),
+          ),
         };
     }
   };
@@ -392,6 +411,8 @@ export function walkBuild(build: Build, data: GameData): WalkResult {
         return 'Skills';
       case 'weapon-proficiency':
         return 'Weapon proficiencies';
+      case 'expertise':
+        return 'Expertise';
     }
   };
 
@@ -434,6 +455,11 @@ export function walkBuild(build: Build, data: GameData): WalkResult {
           ctx,
         );
         state.options.set(choice.group, [...(state.options.get(choice.group) ?? []), ...picks]);
+        const group = index.optionGroups.get(choice.group);
+        for (const id of picks) {
+          const option = group?.options.find((o) => o.id === id);
+          if (option?.grants) applyOptionGrants(option.grants, option.name, ctx);
+        }
         return;
       }
       case 'cantrip':
@@ -557,7 +583,48 @@ export function walkBuild(build: Build, data: GameData): WalkResult {
         picks.forEach((w) => state.weaponTypes.add(w));
         return;
       }
+      case 'expertise': {
+        const picks = readList(
+          answer,
+          choice.count,
+          options.kind === 'ids' ? options.ids : [],
+          ctx,
+        );
+        for (const skill of picks as Skill[]) {
+          state.skills.add(skill);
+          state.expertise.add(skill);
+        }
+        return;
+      }
     }
+  };
+
+  /** Spells a subclass level or an option keeps always prepared. */
+  const grantSpells = (ids: string[] | undefined, source: Source, ctx: ChoiceContext) => {
+    for (const spellId of ids ?? []) {
+      if (state.spells.some((s) => s.spellId === spellId && s.kind === 'granted')) continue;
+      state.spells.push({
+        spellId,
+        kind: 'granted',
+        source,
+        owner: ctx.owner,
+        ...(ctx.ability ? { ability: ctx.ability } : {}),
+      });
+    }
+  };
+
+  const applyOptionGrants = (
+    grants: NonNullable<OptionDef['grants']>,
+    name: string,
+    ctx: ChoiceContext,
+  ) => {
+    const source: Source = { ...ctx.source, name: `${ctx.source.name}: ${name}` };
+    addFeatures(grants.features, source);
+    grants.skills?.forEach((s) => state.skills.add(s as Skill));
+    grants.armour?.forEach((a) => state.armour.add(a));
+    if (grants.shields) state.shields = true;
+    grants.weaponTypes?.forEach((w) => state.weaponTypes.add(w));
+    grantSpells(grants.spells, source, ctx);
   };
 
   const addFeatures = (ids: string[] | undefined, source: Source) => {
@@ -688,21 +755,19 @@ export function walkBuild(build: Build, data: GameData): WalkResult {
         state.classResources.set(id, total);
       }
       const spellcasting = cls.spellcasting ?? subclass?.spellcasting;
+      const ctx = (key: string): ChoiceContext => ({
+        characterLevel,
+        key,
+        source,
+        classLevel,
+        owner: `class:${cls.id}`,
+        cls: subclass?.spellcasting ? { ...cls, spellcasting: subclass.spellcasting } : cls,
+        ...(spellcasting ? { ability: spellcasting.ability } : {}),
+      });
+      grantSpells(levelGrant.spells, source, ctx(`${prefix}:spells`));
       levelGrant.choices.forEach((choice, j) => {
         const key = `${prefix}:${j}`;
-        handleChoice(
-          choice,
-          {
-            characterLevel,
-            key,
-            source,
-            classLevel,
-            owner: `class:${cls.id}`,
-            cls: subclass?.spellcasting ? { ...cls, spellcasting: subclass.spellcasting } : cls,
-            ...(spellcasting ? { ability: spellcasting.ability } : {}),
-          },
-          entry.answers[key],
-        );
+        handleChoice(choice, ctx(key), entry.answers[key]);
       });
     };
 

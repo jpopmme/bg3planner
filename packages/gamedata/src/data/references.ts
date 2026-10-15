@@ -1,10 +1,10 @@
-import { classes, subclasses } from './classes';
+import { classOptionGroups, classes, subclasses } from './classes';
 import { feats } from './feats';
 import { races } from './races';
 
 /**
- * Spell ids that hand-written data names directly: expanded spell lists, fixed spell picks and
- * innate spells. The spell generator keeps these even when no class list contains them.
+ * Spell ids that hand-written data names directly: expanded spell lists, fixed spell picks,
+ * innate spells, and spells granted by subclass levels and options. The spell generator keeps these even when no class list contains them.
  */
 export function referencedSpellIds(): Set<string> {
   const ids = new Set<string>();
@@ -21,6 +21,6 @@ export function referencedSpellIds(): Set<string> {
       }
     }
   };
-  visit([classes, subclasses, races, feats]);
+  visit([classes, subclasses, classOptionGroups, races, feats]);
   return ids;
 }
