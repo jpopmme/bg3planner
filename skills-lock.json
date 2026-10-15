@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "skills": {
+    "apple-design": {
+      "source": "registry:emilkowalski/apple-design",
+      "digest": "sha256:a833748f5621bbadbdae2826015d0c8242d1fe94c75d9c5183477dd04f901f5a",
+      "agents": [
+        "claude-code"
+      ],
+      "mode": {
+        "claude-code": "symlink"
+      }
+    }
+  }
+}
