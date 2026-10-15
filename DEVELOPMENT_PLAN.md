@@ -221,6 +221,12 @@ HTML (pasted / uploaded) ──────────────────�
 
 - **Class tracking:** a level header without a class tag continues the current class
   (`Level 2` while Fighter means Fighter 2). Headers such as `Level 9 - Warlock Lv 1` switch class.
+- *Learned in M6:* recent guides open with a **Leveling Overview** table ("Level | Class |
+  Selection", one line per pick such as `Replace Spell: A -> B`). It is the importer's main
+  source; the per-level prose sections are not parsed. Picks are placed with the rules engine
+  (`availableChoices`), so an import can never produce an illegal build. Names are matched
+  exactly after normalising, then within a choice's own options allowing two typos (no fuse.js).
+  An honest `bg3planner` user agent is accepted; the earlier 403 came from one fetching tool.
 - **Robustness:** every section parser is optional. A missing section produces a warning and does
   not fail the import. Unmatched entities go into `unresolved` for manual fixing.
 - **Tests:** a local snapshot of the Hexknight page plus 4–5 other guides covering different

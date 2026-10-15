@@ -5,6 +5,7 @@ import { classColour } from '../lib/class-colours';
 import { useBuildStore } from '../stores/build';
 import ChoicePicker from './ChoicePicker.vue';
 import IssueList from './IssueList.vue';
+import SourceNotes from './SourceNotes.vue';
 
 const props = defineProps<{ level: number }>();
 const store = useBuildStore();
@@ -81,6 +82,8 @@ const features = computed(() =>
           <span class="muted">Gains</span>
           {{ features.join(', ') }}
         </p>
+
+        <SourceNotes v-if="store.build.source" :source="store.build.source" :level="level" />
 
         <IssueList :issues="looseIssues" />
 

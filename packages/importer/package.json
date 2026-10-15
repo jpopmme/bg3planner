@@ -5,9 +5,18 @@
   "type": "module",
   "description": "Turns build guides (e.g. Gamestegy) into draft builds",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./test-helpers": "./src/test/guide-page.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@bg3planner/gamedata": "^0.0.0",
+    "@bg3planner/rules": "^0.0.0",
+    "@bg3planner/shared": "^0.0.0",
+    "cheerio": "^1.2.0",
+    "devalue": "^6.0.3",
+    "domhandler": "^6.0.1"
   }
 }

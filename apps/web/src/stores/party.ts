@@ -387,6 +387,15 @@ export const usePartyStore = defineStore('party', () => {
     return id;
   }
 
+  /** Adds an imported character, into the active party if there is room. Returns its id. */
+  function addImportedMember(name: string, build: PartyMember['build']): string | undefined {
+    if (party.value.members.length >= MAX_ROSTER) return undefined;
+    const id = globalThis.crypto.randomUUID();
+    party.value.members.push({ id, name: name.slice(0, 80), build: clone(build) });
+    if (party.value.activeMemberIds.length < MAX_ACTIVE) party.value.activeMemberIds.push(id);
+    return id;
+  }
+
   /** A copy of a custom character (origins exist only once). Returns the copy's id. */
   function duplicateMember(memberId: string): string | undefined {
     const source = party.value.members.find((m) => m.id === memberId);
@@ -475,6 +484,7 @@ export const usePartyStore = defineStore('party', () => {
     setPartyName,
     takenOrigins,
     addMember,
+    addImportedMember,
     duplicateMember,
     removeMember,
     toggleActive,

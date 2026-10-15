@@ -6,6 +6,7 @@ import { usePartyStore } from '../stores/party';
 import AbilityScores from './AbilityScores.vue';
 import ChoicePicker from './ChoicePicker.vue';
 import IssueList from './IssueList.vue';
+import SourceNotes from './SourceNotes.vue';
 
 const store = useBuildStore();
 const party = usePartyStore();
@@ -25,6 +26,7 @@ const slotIssues = (key: string) =>
 
 <template>
   <div class="creation">
+    <SourceNotes v-if="store.build.source" :source="store.build.source" />
     <IssueList :issues="issues" />
 
     <div class="fields">

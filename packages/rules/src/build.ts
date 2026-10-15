@@ -28,6 +28,28 @@ export const levelEntrySchema = z
   })
   .strict();
 
+/** Where an imported build came from, and what the importer could not settle. */
+export const buildSourceSchema = z
+  .object({
+    kind: z.literal('gamestegy'),
+    url: z.string().url().optional(),
+    /** The guide's title. */
+    title: z.string().max(200),
+    importedAt: z.string(),
+    notes: z
+      .array(
+        z
+          .object({
+            /** Character level the note is about; absent for character creation. */
+            level: z.number().int().min(1).max(MAX_LEVEL).optional(),
+            message: z.string().max(500),
+          })
+          .strict(),
+      )
+      .max(100),
+  })
+  .strict();
+
 export const buildSchema = z
   .object({
     /** Dataset the build was made with (see GAME_DATA_VERSION). */
@@ -46,9 +68,11 @@ export const buildSchema = z
       })
       .strict(),
     levels: z.array(levelEntrySchema).min(1).max(MAX_LEVEL),
+    source: buildSourceSchema.optional(),
   })
   .strict();
 
 export type Answer = z.infer<typeof answerSchema>;
 export type LevelEntry = z.infer<typeof levelEntrySchema>;
 export type Build = z.infer<typeof buildSchema>;
+export type BuildSource = z.infer<typeof buildSourceSchema>;

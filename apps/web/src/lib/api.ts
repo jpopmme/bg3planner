@@ -1,3 +1,4 @@
+import type { ImportResult } from '@bg3planner/importer';
 import type { Party } from '@bg3planner/rules';
 
 export interface RemoteParty {
@@ -50,3 +51,7 @@ export const deleteParty = (id: string, editToken: string) =>
     method: 'DELETE',
     headers: auth(editToken),
   });
+
+/** Turns a Gamestegy guide (its link, or the page's HTML) into a draft build. */
+export const importGuide = (source: { url: string } | { html: string }) =>
+  request<ImportResult>('/import', { method: 'POST', body: JSON.stringify(source) });

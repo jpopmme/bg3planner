@@ -3,6 +3,7 @@ import { gameData } from '@bg3planner/gamedata';
 import { MAX_ACTIVE, MAX_ROSTER, deriveCharacter, partyIssues } from '@bg3planner/rules';
 import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import ImportDialog from '../components/ImportDialog.vue';
 import IssueList from '../components/IssueList.vue';
 import MemberCard from '../components/MemberCard.vue';
 import PartyOverview from '../components/PartyOverview.vue';
@@ -29,6 +30,7 @@ const activeCharacters = computed(() =>
 );
 
 const newOrigin = ref('custom');
+const importDialog = ref<InstanceType<typeof ImportDialog>>();
 const rosterFull = computed(() => party.party.members.length >= MAX_ROSTER);
 
 async function addCharacter() {
@@ -116,11 +118,20 @@ function startOver() {
         <button type="submit" class="primary" data-action="add-character" :disabled="rosterFull">
           Add character
         </button>
+        <button
+          type="button"
+          data-action="import-guide"
+          :disabled="rosterFull"
+          @click="importDialog?.open()"
+        >
+          Import from a guide
+        </button>
         <p v-if="rosterFull" class="muted">The roster holds at most {{ MAX_ROSTER }} characters.</p>
       </form>
     </section>
 
     <PartyOverview :members="activeCharacters" />
+    <ImportDialog ref="importDialog" />
   </div>
 </template>
 

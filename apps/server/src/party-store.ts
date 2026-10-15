@@ -30,6 +30,11 @@ export class PartyStore {
         edit_token_hash TEXT NOT NULL,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS import_cache (
+        key TEXT PRIMARY KEY,
+        result TEXT NOT NULL,
+        fetched_at TEXT NOT NULL
       )
     `);
   }
@@ -72,6 +77,24 @@ export class PartyStore {
 
   delete(id: string): boolean {
     return Number(this.db.prepare('DELETE FROM parties WHERE id = ?').run(id).changes) === 1;
+  }
+
+  // ---- Guide imports: our parsed result (never the guide page itself), kept for a while ---------
+
+  getCachedImport(key: string, notBefore: Date): string | undefined {
+    const row = this.db
+      .prepare('SELECT result, fetched_at AS fetchedAt FROM import_cache WHERE key = ?')
+      .get(key) as { result: string; fetchedAt: string } | undefined;
+    return row && new Date(row.fetchedAt) >= notBefore ? row.result : undefined;
+  }
+
+  putCachedImport(key: string, result: string, fetchedAt: Date) {
+    this.db
+      .prepare(
+        `INSERT INTO import_cache (key, result, fetched_at) VALUES (?, ?, ?)
+         ON CONFLICT (key) DO UPDATE SET result = excluded.result, fetched_at = excluded.fetched_at`,
+      )
+      .run(key, result, fetchedAt.toISOString());
   }
 
   close() {

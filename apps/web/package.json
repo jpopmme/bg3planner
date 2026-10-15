@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@bg3planner/gamedata": "^0.0.0",
+    "@bg3planner/importer": "^0.0.0",
     "@bg3planner/rules": "^0.0.0",
     "@bg3planner/shared": "^0.0.0",
     "lz-string": "^1.5.0",

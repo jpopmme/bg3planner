@@ -59,6 +59,20 @@ characters and companions, whose race, subrace and background are fixed as in th
 class is free, as after a respec). Each origin can be in the roster once. **Who rolls best**
 compares the active party's skill and saving throw bonuses and lists who lacks darkvision.
 
+## Importing build guides
+
+**Import from a guide** (party page) turns a Gamestegy BG3 build guide into a character. Give the
+guide's link, or, if the server cannot fetch it, paste the page's source. The importer reads the
+guide's *Leveling Overview* table plus its race, background and ability tables, and places every
+pick with the rules engine, so only legal choices are imported. A review screen shows what the
+guide leaves to you ("any spell", a spell to replace, alternative feats); those notes stay with the
+character next to their levels.
+
+Only the parsed choices and short notes are stored, with a link back to the guide; guide text is
+never kept. The server fetches a guide at most once a day (identifying itself as `bg3planner`).
+Real guide pages used for testing go in `packages/importer/fixtures/private/` (git-ignored); CI
+tests run on synthetic pages built in `src/test/guide-page.ts`.
+
 ## Saving and sharing
 
 The planner saves the party in the browser on every change, so a reload never loses work.
@@ -84,5 +98,6 @@ browser, on import and on the server); see `migrateParty` in `packages/rules/src
 | `GET /api/parties/:id`   | none                    | Returns `party`, `revision`, `updatedAt`               |
 | `PUT /api/parties/:id`   | `Bearer <editToken>`    | Body `{ party, revision }`; 409 with `current` if the stored revision moved on |
 | `DELETE /api/parties/:id`| `Bearer <editToken>`    | Deletes the online copy                                |
+| `POST /api/import`       | none (20/min)           | Body `{ url }` (Gamestegy guide link) or `{ html }`; returns the draft build and notes |
 
 The server keeps only a SHA-256 hash of each edit token.
