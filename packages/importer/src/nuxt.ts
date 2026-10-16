@@ -2,6 +2,8 @@ import { unflatten } from 'devalue';
 
 /** The build guide embedded in a Gamestegy post page. */
 export interface GuidePost {
+  /** Gamestegy's post id, as in /post/bg3/<id>/<slug>. */
+  id?: number;
   title: string;
   /** Article HTML. */
   text: string;
@@ -64,6 +66,7 @@ export function extractPost(html: string): GuidePost {
   );
   if (!post) throw new GuideFormatError('This page is not a build guide.');
   return {
+    ...(Number.isSafeInteger(post.id) ? { id: post.id as number } : {}),
     title: String(post.title).trim(),
     text: String(post.text),
     ...(post.build_data && typeof post.build_data === 'object'

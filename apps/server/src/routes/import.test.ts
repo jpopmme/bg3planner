@@ -1,4 +1,10 @@
-import { entity, guidePage, overviewTable, simpleTable } from '@bg3planner/importer/test-helpers';
+import {
+  buildPanel,
+  entity,
+  guidePage,
+  overviewTable,
+  simpleTable,
+} from '@bg3planner/importer/test-helpers';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildApp } from '../app';
 import { PartyStore } from '../party-store';
@@ -18,16 +24,32 @@ const page = guidePage(
   'Hexblade Warlock - Test Build',
 );
 
+/** A guide whose Act 1 gear is only in a Gamestegy build panel. */
+const panelPage = guidePage(
+  overviewTable([{ level: 1, className: 'Fighter 1', lines: [] }]) +
+    '<h2>Equipment Recommendations</h2><h3>Act 1</h3>' +
+    buildPanel(7, 'Act 1'),
+  'Panel Fighter - Test Build',
+  42,
+);
+const panelBuild = {
+  id: 7,
+  equipment: { sets: [{ name: 'Act 1', equipment: { helmet: [{ itemId: 1 }] } }] },
+  equipmentItems: [{ id: 1, display_name: 'Helmet of Grit' }],
+};
+
 let fetchGuide: ReturnType<typeof vi.fn<(url: string) => Promise<string>>>;
+let fetchBuild: ReturnType<typeof vi.fn<(url: string) => Promise<unknown>>>;
 let now: Date;
 let app: ReturnType<typeof buildApp>;
 
 beforeEach(() => {
   fetchGuide = vi.fn(async () => page);
+  fetchBuild = vi.fn(async () => panelBuild);
   now = new Date('2026-10-15T12:00:00Z');
   app = buildApp({
     store: new PartyStore(':memory:'),
-    importOptions: { fetchGuide, now: () => now },
+    importOptions: { fetchGuide, fetchBuild, now: () => now },
   });
 });
 afterEach(() => app.close());
@@ -60,6 +82,30 @@ describe('POST /api/import', () => {
     expect(res.statusCode).toBe(200);
     expect(res.json().build.source.url).toBeUndefined();
     expect(fetchGuide).not.toHaveBeenCalled();
+  });
+
+  it('loads the gear of build panels from Gamestegy, for links and pasted pages', async () => {
+    fetchGuide.mockResolvedValue(panelPage);
+    for (const payload of [{ url: GUIDE_URL }, { html: panelPage }]) {
+      const res = await post(payload);
+      expect(res.statusCode).toBe(200);
+      expect(res.json().build.equipment.act1).toEqual({ head: 'helmet-of-grit' });
+    }
+    expect(fetchBuild).toHaveBeenCalledWith('https://backend.gamestegy.com/api/bg3-builds/post/42');
+    // Guides without panels need no second request.
+    fetchBuild.mockClear();
+    await post({ html: page });
+    expect(fetchBuild).not.toHaveBeenCalled();
+  });
+
+  it('still imports a guide whose panel data cannot be loaded', async () => {
+    fetchBuild.mockRejectedValueOnce(new FetchError('Gamestegy answered HTTP 500.'));
+    const res = await post({ html: panelPage });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().build.equipment).toBeUndefined();
+    expect(res.json().notes.map((n: { message: string }) => n.message)).toContain(
+      'Some of the guide’s gear or ability scores are in Gamestegy build panels that could not be loaded.',
+    );
   });
 
   it('only fetches Gamestegy guide links', async () => {

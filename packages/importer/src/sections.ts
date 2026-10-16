@@ -41,9 +41,21 @@ export interface GearSetup {
   rows: GearRow[];
 }
 
+/**
+ * A Gamestegy build panel embedded in the article ("BG3 Build Equipment Embed, Build ID: 59,
+ * Sets: Act 1"). Its contents are not in the page; they come from Gamestegy's build API.
+ */
+export interface EmbedRef {
+  buildId: number;
+  /** Names of the gear sets it shows; may be stale if the build's sets were renamed. */
+  sets: string[];
+}
+
 export interface ActGear {
   act: 1 | 2 | 3;
   setups: GearSetup[];
+  /** Build panels under this act's heading, in the guide's order. */
+  embeds: EmbedRef[];
 }
 
 export interface GuideSections {
@@ -55,6 +67,8 @@ export interface GuideSections {
   backgrounds: string[];
   /** From the first ability table, if the overview gives none. */
   abilityTable?: Record<string, AbilityValue>;
+  /** Every build panel in the article, in order. */
+  embeds: EmbedRef[];
 }
 
 const text = (node: Cheerio<AnyNode>) => cleanText(node.text());
@@ -102,8 +116,21 @@ function parseLine(raw: string): OverviewLine {
   return { label: '', value: line.trim() };
 }
 
+/** The "Level | Class | Selection" table, under whichever heading ("Leveling Overview", "Build Overview"). */
+function overviewTable($: CheerioAPI): Cheerio<Element> | undefined {
+  const byHeader = $('table')
+    .filter((_, el) => {
+      const cells = $(el).find('tr').first().children().toArray();
+      return /^level class selection$/i.test(cells.map((c) => text($(c))).join(' '));
+    })
+    .first();
+  return byHeader.length
+    ? byHeader
+    : firstTable(sectionAfter($, /lev(e)?ll?ing overview/i, 'h2, h3'));
+}
+
 function parseOverview($: CheerioAPI): OverviewLevel[] {
-  const table = firstTable(sectionAfter($, /lev(e)?ll?ing overview/i, 'h2, h3'));
+  const table = overviewTable($);
   if (!table) return [];
   const levels: OverviewLevel[] = [];
   for (const tr of table.find('tbody tr').toArray()) {
@@ -218,6 +245,21 @@ function parseGearTable($: CheerioAPI, table: Cheerio<Element>): GearRow[] {
   return rows;
 }
 
+/** A build panel's reference, from its placeholder figure. */
+function embedRef($: CheerioAPI, figure: Element): EmbedRef | undefined {
+  const node = $(figure).clone();
+  node.find('br').replaceWith('\n');
+  const lines = node.text().split('\n').map(cleanText);
+  if (!lines.some((l) => /^BG3 Build .*Embed$/i.test(l))) return undefined;
+  const buildId = Number(lines.map((l) => /^Build ID:\s*(\d+)$/i.exec(l)?.[1]).find(Boolean));
+  if (!Number.isSafeInteger(buildId) || buildId <= 0) return undefined;
+  const sets = lines.map((l) => /^Sets:\s*(.+)$/i.exec(l)?.[1]).find(Boolean);
+  return {
+    buildId,
+    sets: sets && !/^all$/i.test(sets) ? sets.split(/\s*,\s*/).filter(Boolean) : [],
+  };
+}
+
 function parseEquipment($: CheerioAPI): ActGear[] {
   const section = sectionAfter($, /equipment|gear/i, 'h2');
   if (!section) return [];
@@ -230,15 +272,25 @@ function parseEquipment($: CheerioAPI): ActGear[] {
     const tag = el.tagName.toLowerCase();
     if (tag === 'h3') {
       const number = /\bact\s*([123])\b/i.exec(text(node))?.[1];
-      act = number ? { act: Number(number) as ActGear['act'], setups: [] } : undefined;
-      if (act) acts.push(act);
-      setup = undefined;
+      // A second heading for the same act ("Act 2 - becoming Dark Justiciar") adds setups to it.
+      const existing = acts.find((a) => a.act === Number(number));
+      act = number
+        ? (existing ?? { act: Number(number) as ActGear['act'], setups: [], embeds: [] })
+        : undefined;
+      if (act && !existing) acts.push(act);
+      setup = existing ? { title: text(node), rows: [] } : undefined;
+      if (setup) act!.setups.push(setup);
     } else if (!act) {
       continue;
     } else if (tag === 'h4') {
       setup = { title: text(node), rows: [] };
       act.setups.push(setup);
     } else {
+      const figures = node.is('figure') ? node : node.find('figure');
+      for (const figure of figures.toArray()) {
+        const ref = embedRef($, figure);
+        if (ref) act.embeds.push(ref);
+      }
       const tables = node.is('table') ? node : node.find('table');
       for (const table of tables.toArray()) {
         const rows = parseGearTable($, $(table));
@@ -259,6 +311,9 @@ export function readSections(articleHtml: string): GuideSections {
     overview: parseOverview($),
     equipment: parseEquipment($),
     races: firstColumn($, firstTable(sectionAfter($, /^(custom )?races?$/i))),
+    embeds: $('figure')
+      .toArray()
+      .flatMap((figure) => embedRef($, figure) ?? []),
     backgrounds: firstColumn($, firstTable(sectionAfter($, /^backgrounds?$/i))),
     ...(abilityTable ? { abilityTable } : {}),
   };

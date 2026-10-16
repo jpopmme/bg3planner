@@ -8,7 +8,7 @@ export interface OverviewRow {
 }
 
 /** An overview table shaped like Gamestegy's ("Level | Class | Selection", rowspans per level). */
-export function overviewTable(rows: OverviewRow[]): string {
+export function overviewTable(rows: OverviewRow[], heading = 'Leveling Overview'): string {
   const body = rows
     .flatMap(({ level, className, lines }) => {
       const cells = lines.length ? lines : ['-'];
@@ -19,7 +19,7 @@ export function overviewTable(rows: OverviewRow[]): string {
       );
     })
     .join('');
-  return `<h2>Leveling Overview</h2><table class="expandable-table"><thead><tr><th>Level</th><th>Class</th><th>Selection</th></tr></thead><tbody>${body}</tbody></table>`;
+  return `<h2>${heading}</h2><table class="expandable-table"><thead><tr><th>Level</th><th>Class</th><th>Selection</th></tr></thead><tbody>${body}</tbody></table>`;
 }
 
 /** A tagged game entity, the way guides mark spells and features. */
@@ -53,11 +53,21 @@ export function gearTable(rows: { slot: string; items: string[] }[]): string {
   return `<table><tbody><tr><th>Slot</th><th>Item</th><th>Description</th></tr>${body}</tbody></table>`;
 }
 
+/** The placeholder Gamestegy leaves in the article for a build panel it fills in later. */
+export const buildPanel = (buildId: number, sets: string) =>
+  `<figure class="bg3-equipment-embed"><strong>BG3 Build Equipment Embed</strong><br>Build ID: ${buildId}<br>Mode: Full Equipment<br>Sets: ${sets}</figure>`;
+
 /** A post page with the article embedded the way Nuxt embeds it. */
-export function guidePage(article: string, title = 'Test Guide - Example Build'): string {
+export function guidePage(
+  article: string,
+  title = 'Test Guide - Example Build',
+  postId = 1,
+): string {
   const payload = stringify({
     data: {
-      'gamePostPage:bg3:1:test': { post: { title, text: article, build_data: { classes: [] } } },
+      'gamePostPage:bg3:1:test': {
+        post: { id: postId, title, text: article, build_data: { classes: [] } },
+      },
     },
   });
   return `<!doctype html><html><body><div id="__nuxt"></div><script type="application/json" data-nuxt-data="nuxt-app" id="__NUXT_DATA__">${payload}</script></body></html>`;

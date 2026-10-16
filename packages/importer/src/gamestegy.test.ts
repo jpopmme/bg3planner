@@ -1,7 +1,19 @@
 import { gameData } from '@bg3planner/gamedata';
 import { describe, expect, it } from 'vitest';
-import { GuideFormatError, importGamestegyGuide, isGamestegyGuideUrl } from './index';
-import { entity, gearTable, guidePage, overviewTable, simpleTable } from './test/guide-page';
+import {
+  GuideFormatError,
+  embeddedBuildUrl,
+  importGamestegyGuide,
+  isGamestegyGuideUrl,
+} from './index';
+import {
+  buildPanel,
+  entity,
+  gearTable,
+  guidePage,
+  overviewTable,
+  simpleTable,
+} from './test/guide-page';
 
 const races = simpleTable('Races', ['Wood Half-Elf', 'Half-Orc']);
 const backgrounds = simpleTable('Background', ['Charlatan', 'Noble']);
@@ -326,6 +338,123 @@ describe('a guide with a respec plan', () => {
       'class:0': ['ability-improvement'],
       'feat:0': { wisdom: 1, constitution: 1 },
     });
+  });
+});
+
+/** Gamestegy's build API response for the panels below, trimmed to what the importer reads. */
+const panelBuild = {
+  id: 7,
+  post_id: 42,
+  leveling: null,
+  equipment: {
+    sets: [
+      {
+        id: 'act-1',
+        name: 'Act 1',
+        equipment: { mainHand: [{ itemId: 1 }], rings: [{ itemId: 2 }], rings2: [{ itemId: 3 }] },
+      },
+      { id: 'act-2', name: 'Act 2', equipment: { helmet: [{ itemId: 4 }] } },
+      { id: 'late', name: 'Act 2 - Late', equipment: { helmet: [{ itemId: 5 }] } },
+    ],
+  },
+  ability_points: {
+    tabs: [
+      {
+        name: 'Main',
+        values: {
+          Strength: 8,
+          Dexterity: 14,
+          Constitution: 15,
+          Intelligence: 8,
+          Wisdom: 17,
+          Charisma: 12,
+        },
+        plusOne: 'Constitution',
+        plusTwo: 'Wisdom',
+      },
+      { name: 'Alt', values: {}, plusOne: null, plusTwo: null },
+    ],
+  },
+  equipmentItems: [
+    { id: 1, display_name: 'The Blood of Lathander' },
+    { id: 2, display_name: 'Ring of Protection' },
+    { id: 3, display_name: "Crusher's Ring" },
+    { id: 4, display_name: 'Helmet of Grit' },
+    { id: 5, display_name: 'Haste Helm' },
+  ],
+};
+
+const panelGuide = guidePage(
+  simpleTable('Races', ['Half-Orc']) +
+    overviewTable(
+      [{ level: 1, className: 'Cleric 1', lines: ['<strong>Subclass:</strong> Life Domain'] }],
+      'Build Overview',
+    ) +
+    '<h3>Abilities</h3>' +
+    buildPanel(7, 'All') +
+    '<h2>Equipment Recommendations</h2>' +
+    '<h3>Act 1</h3>' +
+    buildPanel(7, 'Act 1') +
+    // Renamed since the guide was written: the build's "Act 2" sets are used instead.
+    '<h3>Act 2 - mid-game</h3>' +
+    buildPanel(7, 'Item set 2') +
+    '<h3>Act 2 - late</h3>' +
+    buildPanel(7, 'Act 2 - Late'),
+  'Panel Cleric - Test Build',
+  42,
+);
+
+describe('a guide with Gamestegy build panels', () => {
+  const result = importGamestegyGuide(panelGuide, gameData, { builds: [panelBuild] });
+  const notes = result.notes.map((n) => n.message);
+
+  it('says where the panel data comes from', () => {
+    expect(embeddedBuildUrl(panelGuide)).toBe(
+      'https://backend.gamestegy.com/api/bg3-builds/post/42',
+    );
+    expect(embeddedBuildUrl(warlockGuide)).toBeUndefined();
+  });
+
+  it('reads the levels from a "Build Overview" table', () => {
+    expect(result.build.levels).toEqual([
+      { classId: 'cleric', answers: { 'class:0': ['life-domain'] } },
+    ]);
+  });
+
+  it('takes the ability scores from the first panel setup', () => {
+    expect(result.build.abilities).toEqual({
+      base: {
+        strength: 8,
+        dexterity: 14,
+        constitution: 14,
+        intelligence: 8,
+        wisdom: 15,
+        charisma: 12,
+      },
+      racialBonus: { wisdom: 2, constitution: 1 },
+    });
+    expect(notes).toContain(
+      'The guide offers more than one ability score setup; "Main" was used (also "Alt").',
+    );
+  });
+
+  it('fills each act from its panels, matching renamed sets by act', () => {
+    expect(result.build.equipment?.act1).toEqual({
+      meleeMain: 'the-blood-of-lathander',
+      ring1: 'ring-of-protection',
+      ring2: 'crushers-ring',
+    });
+    expect(result.build.equipment?.act2).toMatchObject({ head: 'helmet-of-grit' });
+    expect(notes).toContain('The guide also describes Act 2 - Late; Act 2 was used.');
+    expect(result.build.equipment?.act3).toEqual(result.build.equipment?.act2);
+  });
+
+  it('says so when the panel data could not be loaded', () => {
+    const without = importGamestegyGuide(panelGuide, gameData);
+    expect(without.build.equipment).toBeUndefined();
+    expect(without.notes.map((n) => n.message)).toContain(
+      'Some of the guide’s gear or ability scores are in Gamestegy build panels that could not be loaded.',
+    );
   });
 });
 

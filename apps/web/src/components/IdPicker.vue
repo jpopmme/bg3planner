@@ -48,6 +48,14 @@ function toggle(optionId: string, checked: boolean) {
 }
 
 const full = computed(() => selected.value.length >= count.value);
+
+/** Spells known from elsewhere: shown greyed out, so a missing spell is explained. */
+const knownElsewhere = computed(() => {
+  const q = query.value.trim().toLowerCase();
+  return (props.choiceSlot.alreadyKnown ?? []).filter(
+    (k) => !q || optionName(props.choiceSlot.choice, k.id).name.toLowerCase().includes(q),
+  );
+});
 </script>
 
 <template>
@@ -98,7 +106,19 @@ const full = computed(() => selected.value.length >= count.value);
           :label="optionName(choiceSlot.choice, optionId).name"
         />
       </li>
-      <li v-if="visible.length === 0 && invalid.length === 0" class="empty">
+      <li v-for="known in knownElsewhere" :key="`known-${known.id}`" class="known">
+        <label>
+          <input :type="single ? 'radio' : 'checkbox'" disabled :value="known.id" />
+          <span class="text">
+            <span class="name">{{ optionName(choiceSlot.choice, known.id).name }}</span>
+            <span class="detail">Already known: {{ known.source }}</span>
+          </span>
+        </label>
+      </li>
+      <li
+        v-if="visible.length === 0 && invalid.length === 0 && knownElsewhere.length === 0"
+        class="empty"
+      >
         {{ offered.length ? 'Nothing matches the filter.' : 'Nothing left to choose here.' }}
       </li>
     </ul>
@@ -207,6 +227,10 @@ input:disabled + .text .name {
 .invalid .name,
 .invalid .detail {
   color: var(--error);
+}
+
+.known .name {
+  color: var(--ink-muted);
 }
 
 .empty {

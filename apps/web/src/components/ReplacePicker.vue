@@ -21,6 +21,8 @@ const known = computed(() =>
 const replacements = computed(() =>
   props.choiceSlot.options.kind === 'replace' ? props.choiceSlot.options.to : [],
 );
+/** Spells the character knows already cannot be learned again; listed so their absence is clear. */
+const knownElsewhere = computed(() => props.choiceSlot.alreadyKnown ?? []);
 
 /** The spell picked to replace, held here until its replacement is picked too. */
 const pendingFrom = ref('');
@@ -79,6 +81,11 @@ function clear() {
         <option v-for="spellId in replacements" :key="spellId" :value="spellId">
           {{ spellName(spellId).name }} ({{ spellName(spellId).detail }})
         </option>
+        <optgroup v-if="knownElsewhere.length" label="Already known">
+          <option v-for="spell in knownElsewhere" :key="spell.id" :value="spell.id" disabled>
+            {{ spellName(spell.id).name }} ({{ spell.source }})
+          </option>
+        </optgroup>
       </select>
       <button v-if="from" type="button" @click="clear">Keep all spells</button>
     </div>

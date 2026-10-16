@@ -44,3 +44,19 @@ describe('IdPicker', () => {
     expect(store.build.levels[0]!.answers['class:0']).toBeUndefined();
   });
 });
+
+describe('IdPicker with spells known elsewhere', () => {
+  it('lists a cantrip the race already taught, greyed out with where it came from', () => {
+    const store = useBuildStore();
+    store.setRace('elf');
+    store.setSubrace('high-elf');
+    store.setLevelClass(0, 'sorcerer');
+    store.setAnswer(1, 'subrace:0', ['fire-bolt']);
+    const cantrips = store.choices.find((c) => c.key === 'class:1')!;
+    const wrapper = mount(IdPicker, { props: { choiceSlot: cantrips } });
+    const known = wrapper.find('li.known');
+    expect(known.text()).toContain('Fire Bolt');
+    expect(known.text()).toContain('Already known: High Elf');
+    expect(known.find('input').attributes('disabled')).toBeDefined();
+  });
+});

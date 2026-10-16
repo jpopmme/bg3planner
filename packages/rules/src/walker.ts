@@ -51,6 +51,12 @@ export interface ChoiceSlot {
   answer: Answer | undefined;
   /** Spell replacements may be skipped. */
   optional: boolean;
+  /**
+   * Spells this choice would offer but the character already knows from elsewhere (a race's
+   * cantrip, an earlier level), with what taught them. They cannot be picked twice; pickers show
+   * them greyed out so the player sees why.
+   */
+  alreadyKnown?: { id: string; source: string }[];
 }
 
 /**
@@ -238,6 +244,28 @@ export function walkBuild(build: Build, data: GameData): WalkResult {
     return pool;
   };
 
+  /** Spells of the pool a cantrip, spell or replacement choice takes, known or not. */
+  const fitsSpellChoice = (
+    s: Spell,
+    choice: Extract<Choice, { type: 'cantrip' | 'spell' | 'replace-spell' }>,
+  ) =>
+    choice.type === 'cantrip'
+      ? s.level === 0
+      : s.level >= (choice.minLevel ?? 1) &&
+        s.level <= choice.maxLevel &&
+        (!choice.schools || (s.school !== null && choice.schools.includes(s.school)));
+
+  /** What `ChoiceSlot.alreadyKnown` lists for a choice. */
+  const knownElsewhere = (choice: Choice, ctx: ChoiceContext) => {
+    if (choice.type !== 'cantrip' && choice.type !== 'spell' && choice.type !== 'replace-spell') {
+      return [];
+    }
+    return spellPool(choice, ctx).flatMap((s) => {
+      const known = fitsSpellChoice(s, choice) && state.spells.find((k) => k.spellId === s.id);
+      return known ? [{ id: s.id, source: known.source.name }] : [];
+    });
+  };
+
   const optionsFor = (choice: Choice, ctx: ChoiceContext): ChoiceOptions => {
     switch (choice.type) {
       case 'subclass':
@@ -270,7 +298,7 @@ export function walkBuild(build: Build, data: GameData): WalkResult {
         return {
           kind: 'ids',
           ids: spellPool(choice, ctx)
-            .filter((s) => s.level === 0 && !known.has(s.id))
+            .filter((s) => fitsSpellChoice(s, choice) && !known.has(s.id))
             .map((s) => s.id),
         };
       }
@@ -278,13 +306,7 @@ export function walkBuild(build: Build, data: GameData): WalkResult {
       case 'replace-spell': {
         const known = knownIds();
         const to = spellPool(choice, ctx)
-          .filter(
-            (s) =>
-              s.level >= (choice.minLevel ?? 1) &&
-              s.level <= choice.maxLevel &&
-              (!choice.schools || (s.school !== null && choice.schools.includes(s.school))) &&
-              !known.has(s.id),
-          )
+          .filter((s) => fitsSpellChoice(s, choice) && !known.has(s.id))
           .map((s) => s.id);
         if (choice.type === 'spell') return { kind: 'ids', ids: to };
         const from = state.spells
@@ -420,6 +442,7 @@ export function walkBuild(build: Build, data: GameData): WalkResult {
     const label = describe(choice);
     const ctx = { ...baseCtx, label: `${baseCtx.source.name} – ${label}` };
     const options = optionsFor(choice, ctx);
+    const alreadyKnown = knownElsewhere(choice, ctx);
     slots.push({
       characterLevel: ctx.characterLevel,
       key: ctx.key,
@@ -429,6 +452,7 @@ export function walkBuild(build: Build, data: GameData): WalkResult {
       options,
       answer,
       optional: choice.type === 'replace-spell',
+      ...(alreadyKnown.length ? { alreadyKnown } : {}),
     });
     const level = ctx.characterLevel;
 

@@ -9,7 +9,15 @@ import { importGamestegyGuide } from './index';
 // fixtures/private/ to run these checks. CI runs the synthetic guides in gamestegy.test.ts.
 const fixture = (name: string) =>
   fileURLToPath(new URL(`../fixtures/private/${name}.html`, import.meta.url));
-const load = (name: string) => importGamestegyGuide(readFileSync(fixture(name), 'utf8'), gameData);
+/** Gamestegy's build panel data for a guide, saved next to it as `<name>.build.json`. */
+const panelData = (name: string) => {
+  const path = fileURLToPath(new URL(`../fixtures/private/${name}.build.json`, import.meta.url));
+  return existsSync(path) ? [JSON.parse(readFileSync(path, 'utf8')) as unknown] : [];
+};
+const load = (name: string) =>
+  importGamestegyGuide(readFileSync(fixture(name), 'utf8'), gameData, {
+    builds: panelData(name),
+  });
 
 describe.skipIf(!existsSync(fixture('eldritch-hexknight')))('Eldritch Hexknight guide', () => {
   const result = load('eldritch-hexknight');
@@ -315,3 +323,42 @@ describe.skipIf(!existsSync(fixture('radiating-armored-monk')))('Radiating Monk 
     ]);
   });
 });
+
+describe.skipIf(!existsSync(fixture('shadowheart-trickery-cleric-build')))(
+  'Shadowheart Trickery Cleric guide',
+  () => {
+    const result = load('shadowheart-trickery-cleric-build');
+
+    it('reads the levels from its "Build Overview" table', () => {
+      expect(classesOf('shadowheart-trickery-cleric-build')).toEqual([
+        'cleric/trickery-domain 6',
+        'monk/way-of-shadow 6',
+      ]);
+    });
+
+    it('fills every act from its build panels', () => {
+      expect(Object.keys(result.build.equipment ?? {})).toEqual(['act1', 'act2', 'act3']);
+      expect(result.build.equipment?.act3).toMatchObject({
+        meleeMain: 'shars-spear-of-evening',
+        armour: 'bhaalist-armour',
+      });
+      expect(result.notes.map((n) => n.message)).toContain(
+        'The guide also describes Act 2 - becoming Dark Justiciar; Act 2 - before Dark Justiciar was used.',
+      );
+    });
+  },
+);
+
+describe.skipIf(!existsSync(fixture('bg3-drunken-master-monk-build')))(
+  'Drunken Master guide',
+  () => {
+    it('imports levels and gear the guide only shows in a "Build Overview" and panels', () => {
+      const result = load('bg3-drunken-master-monk-build');
+      expect(classesOf('bg3-drunken-master-monk-build')).toEqual([
+        'monk/way-of-the-drunken-master 8',
+        'rogue/thief 4',
+      ]);
+      expect(Object.keys(result.build.equipment ?? {})).toEqual(['act1', 'act2', 'act3']);
+    });
+  },
+);

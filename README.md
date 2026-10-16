@@ -130,7 +130,10 @@ guide's link, or, if the server cannot fetch it, paste the page's source. The im
 guide's *Leveling Overview* table plus its race, background and ability tables, and places every
 pick with the rules engine, so only legal choices are imported. Its *Equipment Recommendations*
 fill each act's gear: the first item per slot that the rules allow, from the first setup, keeping
-the previous act's item where an act lists nothing new. Guides that respec into a different first level
+the previous act's item where an act lists nothing new. Some guides show their gear and ability
+scores in Gamestegy build panels rather than tables; the server then also loads that panel data
+from Gamestegy's build API (`backend.gamestegy.com/api/bg3-builds/post/<post id>`). Guides that
+respec into a different first level
 ("Fighter 1 (respec as first level)") are imported as the respecced build. A review screen shows
 what the guide leaves to you ("any spell", a spell to replace, alternative feats and items); those notes stay with the
 character next to their levels and acts.

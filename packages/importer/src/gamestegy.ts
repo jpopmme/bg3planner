@@ -11,6 +11,7 @@ import {
   validateBuild,
 } from '@bg3planner/rules';
 import { ABILITIES, type Ability, SKILLS, type Skill } from '@bg3planner/shared';
+import { embeddedAbilities, embeddedGear, readEmbeddedBuilds } from './embeds';
 import { importEquipment } from './equipment';
 import { type Named, matchName } from './match';
 import { extractPost } from './nuxt';
@@ -318,10 +319,19 @@ function kindOf(label: string, data: GameData): Kind | undefined {
 export function importGamestegyGuide(
   html: string,
   data: GameData,
-  options: { url?: string; now?: Date } = {},
+  options: {
+    url?: string;
+    now?: Date;
+    /**
+     * Gamestegy's data for the build panels the page embeds (see `guideBuildIds` and
+     * `EMBEDDED_BUILD_URL`), as fetched: gear and abilities some guides only show there.
+     */
+    builds?: unknown[];
+  } = {},
 ): ImportResult {
   const post = extractPost(html);
   const sections = readSections(post.text);
+  const builds = readEmbeddedBuilds(options.builds ?? []);
   const notes: ImportNote[] = [];
   const note = (message: string, level?: number) =>
     notes.push({ ...(level ? { level } : {}), message });
@@ -366,12 +376,19 @@ export function importGamestegyGuide(
     );
   }
 
-  // ---- Abilities: the overview's line, else the first ability table
+  // ---- Abilities: the overview's line, else the first ability table, else a build panel
   const abilityLine = sections.overview
     .flatMap((l) => l.lines)
     .map((line) => abilitiesFromLine(`${line.label}: ${line.value}`))
     .find(Boolean);
-  const abilityValues = abilityLine ?? sections.abilityTable;
+  const panel =
+    abilityLine || sections.abilityTable ? undefined : embeddedAbilities(sections.embeds, builds);
+  if (panel?.others.length) {
+    note(
+      `The guide offers more than one ability score setup; "${panel.setup}" was used (also ${panel.others.map((o) => `"${o}"`).join(', ')}).`,
+    );
+  }
+  const abilityValues = abilityLine ?? sections.abilityTable ?? panel?.values;
   const setups = sections.overview
     .flatMap((l) => l.lines)
     .map((line) => (`${line.label}: ${line.value}`.match(/\bSTR\s*[-–:]/g) ?? []).length)
@@ -423,8 +440,19 @@ export function importGamestegyGuide(
   }
   if (build.levels.length === 0) build.levels.push({ classId: data.classes[0]!.id, answers: {} });
 
-  // ---- Gear, once the levels say what the character is proficient with
-  if (sections.equipment.length) importEquipment(build, sections.equipment, data, gearNote);
+  // ---- Gear, once the levels say what the character is proficient with. Acts may show gear in
+  // tables, in build panels, or both.
+  const gear = sections.equipment.map((act) => ({
+    ...act,
+    setups: [...act.setups, ...embeddedGear(act, builds)],
+  }));
+  const unloaded = sections.embeds.filter((e) => !builds.has(e.buildId));
+  if (unloaded.length) {
+    note(
+      'Some of the guide’s gear or ability scores are in Gamestegy build panels that could not be loaded.',
+    );
+  }
+  if (gear.length) importEquipment(build, gear, data, gearNote);
   else note('The guide has no gear recommendations by act, so no equipment was imported.');
 
   build.source = {

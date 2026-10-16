@@ -257,6 +257,13 @@ HTML (pasted / uploaded) ──────────────────�
   at an expertise level names the expertise. Clerics, Druids and Paladins prepare spells rather
   than learn them, so their guides' spells, like "Scribe Spells" for a Wizard, become notes.
   When a feat line's first suggestion would push an ability past 20, the next one is taken.
+- *Learned later:* newer guides title the levelling table "Build Overview" (it is found by its
+  "Level | Class | Selection" header now), and show gear and ability scores in build panels:
+  `<figure>` placeholders ("BG3 Build Equipment Embed, Build ID: 59, Sets: Act 1") that the page
+  fills in the browser. The server fetches the post's build from
+  `backend.gamestegy.com/api/bg3-builds/post/<post id>` (the by-id endpoint lacks item names),
+  and the importer reads its gear sets and first ability setup. Panels name sets that may since
+  have been renamed; then the build's sets named after the act heading are used.
 - **Robustness:** every section parser is optional. A missing section produces a warning and does
   not fail the import. Unmatched entities go into `unresolved` for manual fixing.
 - **Tests:** a local snapshot of the Hexknight page plus 4–5 other guides covering different

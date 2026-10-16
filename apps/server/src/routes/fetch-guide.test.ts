@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { MAX_GUIDE_BYTES, fetchGuide } from './import';
+import { MAX_GUIDE_BYTES, fetchEmbeddedBuild, fetchGuide } from './import';
 
 const URL_OK = 'https://gamestegy.com/post/bg3/1/x';
 const respond = (
@@ -41,5 +41,36 @@ describe('fetchGuide', () => {
       vi.fn(async () => Promise.reject(new TypeError('getaddrinfo ENOTFOUND'))),
     );
     await expect(fetchGuide(URL_OK)).rejects.toThrow('Gamestegy could not be reached.');
+  });
+});
+
+describe('fetchEmbeddedBuild', () => {
+  const BUILD_URL = 'https://backend.gamestegy.com/api/bg3-builds/post/42';
+
+  it('returns the build data', async () => {
+    vi.stubGlobal('fetch', respond({ body: '{"id":7}' }));
+    expect(await fetchEmbeddedBuild(BUILD_URL)).toEqual({ id: 7 });
+  });
+
+  it('only requests Gamestegy build data', async () => {
+    const fetchMock = respond({ body: '{}' });
+    vi.stubGlobal('fetch', fetchMock);
+    for (const url of [
+      'https://evil.example/api/bg3-builds/post/42',
+      'http://backend.gamestegy.com/api/bg3-builds/post/42',
+      'https://backend.gamestegy.com/api/users/me',
+    ]) {
+      await expect(fetchEmbeddedBuild(url)).rejects.toThrow('Not a Gamestegy build address.');
+    }
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('refuses errors, oversized and unreadable answers', async () => {
+    vi.stubGlobal('fetch', respond({ ok: false, status: 500 }));
+    await expect(fetchEmbeddedBuild(BUILD_URL)).rejects.toThrow('HTTP 500');
+    vi.stubGlobal('fetch', respond({ body: 'x'.repeat(1024 * 1024 + 1) }));
+    await expect(fetchEmbeddedBuild(BUILD_URL)).rejects.toThrow('too large');
+    vi.stubGlobal('fetch', respond({ body: '<html>' }));
+    await expect(fetchEmbeddedBuild(BUILD_URL)).rejects.toThrow('could not be read');
   });
 });

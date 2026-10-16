@@ -7,8 +7,11 @@ import LevelRow from './LevelRow.vue';
 
 const store = useBuildStore();
 const levels = computed(() => store.build.levels.length);
-const nextClass = ref(store.build.levels.at(-1)?.classId ?? 'fighter');
-watch(levels, () => (nextClass.value = store.build.levels.at(-1)?.classId ?? nextClass.value));
+/** The class for the next level: the last level's, until the player picks another. */
+const lastClass = computed(() => store.build.levels.at(-1)?.classId ?? 'fighter');
+const nextClass = ref(lastClass.value);
+// Follows the last level when levels are added or removed, or its class changes.
+watch([levels, lastClass], () => (nextClass.value = lastClass.value));
 </script>
 
 <template>

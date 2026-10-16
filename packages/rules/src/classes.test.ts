@@ -238,3 +238,28 @@ describe('Wizard', () => {
     ]);
   });
 });
+
+describe('spells known from elsewhere', () => {
+  const sorcerer = (answers: Record<number, Build['levels'][number]['answers']>) =>
+    makeBuild({
+      raceId: 'elf',
+      subraceId: 'high-elf',
+      levels: classLevels('sorcerer', 6, answers),
+    });
+
+  it('names the race that taught a cantrip the class list then leaves out', () => {
+    const b = sorcerer({ 1: { 'subrace:0': ['fire-bolt'] } });
+    expect(optionIds(b, 1, 'class:1')).not.toContain('fire-bolt');
+    expect(slot(b, 1, 'class:1')?.alreadyKnown).toContainEqual({
+      id: 'fire-bolt',
+      source: 'High Elf',
+    });
+  });
+
+  it('names the class that already knows a spell a replacement cannot take', () => {
+    const b = sorcerer({ 5: { 'class:0': ['counterspell'] } });
+    const replace = slot(b, 6, 'class:1')!;
+    expect(replace.options.kind === 'replace' && replace.options.to).not.toContain('counterspell');
+    expect(replace.alreadyKnown).toContainEqual({ id: 'counterspell', source: 'Sorcerer' });
+  });
+});
