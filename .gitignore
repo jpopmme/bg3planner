@@ -13,9 +13,9 @@ coverage/
 # saved guide pages used as private importer fixtures
 packages/importer/fixtures/private/
 apps/server/data/
-package-lock.json
-package.json
-package.json
+# lockfiles npm creates inside a single workspace; the root one is tracked
+apps/*/package-lock.json
+packages/*/package-lock.json
 # Playwright output
 e2e/test-results/
 e2e/playwright-report/
